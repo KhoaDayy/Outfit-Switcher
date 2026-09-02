@@ -93,6 +93,7 @@ namespace Warudo.Plugins.McpBridge {
                     preset.PresetIndex = i;
                 }
             }
+            RebuildDynamicTriggers();
         }
 
         private void LinkGroups() {
@@ -116,6 +117,7 @@ namespace Warudo.Plugins.McpBridge {
             if (previous != null && previous != current) GlowOutfitNode.CancelAll(previous);
             if (Character?.GameObject == null) {
                 UpdateStatus("⚠️ Chưa chọn Character hoặc Character chưa load.");
+                RebuildDynamicTriggers();
                 return;
             }
             UpdateStatus($"✅ Character: **{Character.Name}** — bấm Scan Items trên mỗi group.");
@@ -126,6 +128,7 @@ namespace Warudo.Plugins.McpBridge {
                 RestoreLastActiveItem(group);
             }
             ApplyChildVisibilityRules();
+            RebuildDynamicTriggers();
         }
 
         protected override void OnDestroy() {
@@ -238,12 +241,103 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         // ═══════════════════════════════════════════════════════
-        // DYNAMIC TRIGGERS — mỗi item = 1 trigger button
+        // DYNAMIC TRIGGERS — đưa các nút ra ngoài Asset inspector
         // ═══════════════════════════════════════════════════════
+
+        private readonly List<string> _dynamicTriggerKeys = new List<string>();
 
         private void RebuildItemTriggers(OutfitGroup group) {
             LinkRuntimeData();
             Broadcast();
+        }
+
+        public void RebuildDynamicTriggers() {
+            if (TriggerPortCollection == null) return;
+
+            // Xóa các trigger động cũ
+            foreach (var key in _dynamicTriggerKeys) {
+                if (TriggerPortCollection.ContainsPort(key)) {
+                    TriggerPortCollection.RemovePort(key);
+                }
+            }
+            _dynamicTriggerKeys.Clear();
+
+            // 1. Tạo nút Scan và nút Wear từng item cho mỗi Group
+            if (Groups != null) {
+                for (int g = 0; g < Groups.Length; g++) {
+                    var group = Groups[g];
+                    if (group == null) continue;
+                    var groupName = string.IsNullOrWhiteSpace(group.GroupName) ? $"Group {g + 1}" : group.GroupName;
+
+                    // Nút Scan Group
+                    var scanKey = $"dynamic_scan_{g}";
+                    var capturedGroup = group;
+                    var scanPort = new TriggerPort(scanKey, () => ScanGroup(capturedGroup), new TriggerProperties {
+                        label = $"🔄 Scan {groupName}",
+                        description = $"Quét lại danh sách item cho group '{groupName}'",
+                        sectionTitle = $"👗 {groupName.ToUpper()}"
+                    });
+                    TriggerPortCollection.AddPort(scanPort);
+                    _dynamicTriggerKeys.Add(scanKey);
+
+                    // Nút Wear từng item
+                    if (group.Items != null) {
+                        for (int i = 0; i < group.Items.Length; i++) {
+                            var item = group.Items[i];
+                            if (item == null || string.IsNullOrWhiteSpace(item.Path)) continue;
+                            var capturedG = g;
+                            var capturedPath = item.Path;
+                            var itemName = string.IsNullOrWhiteSpace(item.DisplayName) ? item.Path : item.DisplayName;
+                            var itemKey = $"dynamic_wear_{g}_{i}_{item.Path.GetHashCode()}";
+
+                            var port = new TriggerPort(itemKey, () => WearItemByPath(capturedG, capturedPath), new TriggerProperties {
+                                label = $"👗 {itemName}",
+                                description = item.Path
+                            });
+                            TriggerPortCollection.AddPort(port);
+                            _dynamicTriggerKeys.Add(itemKey);
+                        }
+                    }
+                }
+            }
+
+            // 2. Tạo nút Toggle cho Child Visibility Rules
+            if (ChildVisibilityRules != null && ChildVisibilityRules.Length > 0) {
+                for (int r = 0; r < ChildVisibilityRules.Length; r++) {
+                    var rule = ChildVisibilityRules[r];
+                    if (rule == null) continue;
+                    var capturedR = r;
+                    var ruleName = string.IsNullOrWhiteSpace(rule.RuleName) ? $"Rule {r + 1}" : rule.RuleName;
+                    var ruleKey = $"dynamic_rule_{r}";
+
+                    var port = new TriggerPort(ruleKey, () => ToggleChildVisibilityRule(capturedR), new TriggerProperties {
+                        label = $"👁️ Toggle {ruleName}",
+                        description = $"Bật/tắt hiển thị cho {ruleName}",
+                        sectionTitle = r == 0 ? "👁️ CHILD VISIBILITY" : null
+                    });
+                    TriggerPortCollection.AddPort(port);
+                    _dynamicTriggerKeys.Add(ruleKey);
+                }
+            }
+
+            // 3. Tạo nút Apply cho Presets
+            if (Presets != null && Presets.Length > 0) {
+                for (int p = 0; p < Presets.Length; p++) {
+                    var preset = Presets[p];
+                    if (preset == null) continue;
+                    var capturedP = p;
+                    var presetName = string.IsNullOrWhiteSpace(preset.PresetName) ? $"Preset {p + 1}" : preset.PresetName;
+                    var presetKey = $"dynamic_preset_{p}";
+
+                    var port = new TriggerPort(presetKey, () => ApplyPreset(capturedP), new TriggerProperties {
+                        label = $"⚡ {presetName}",
+                        description = $"Áp dụng preset '{presetName}'",
+                        sectionTitle = p == 0 ? "⚡ PRESETS" : null
+                    });
+                    TriggerPortCollection.AddPort(port);
+                    _dynamicTriggerKeys.Add(presetKey);
+                }
+            }
         }
 
 
