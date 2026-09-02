@@ -83,10 +83,6 @@ namespace Warudo.Plugins.McpBridge {
         // OUTFIT PROFILES (SAVE / LOAD / SHARE)
         // ═══════════════════════════════════════════════════════
 
-        [Section("Profiles", 10)]
-        [Trigger]
-        [Label("Save Outfit Profile")]
-        [Description("Save the following settings as an outfit profile. Outfit profiles can be applied on any character in any scene.")]
         public void TriggerSaveProfile() {
             SaveProfileModal().Forget();
         }
@@ -103,10 +99,6 @@ namespace Warudo.Plugins.McpBridge {
             SaveProfile(result.ProfileName);
         }
 
-        [Section("Profiles", 10)]
-        [Trigger]
-        [Label("Load Outfit Profile")]
-        [Description("Load an existing outfit profile. Following settings will be overridden.")]
         public void TriggerLoadProfile() {
             LoadProfileModal().Forget();
         }
@@ -122,10 +114,6 @@ namespace Warudo.Plugins.McpBridge {
             LoadProfile(result.ProfileName);
         }
 
-        [Section("Profiles", 10)]
-        [Trigger]
-        [Label("Open Outfit Profiles Folder")]
-        [Description("Open the folder containing outfit profile files in file explorer.")]
         public void OpenProfilesFolder() {
             try {
                 var folder = GetProfilesFolder();
@@ -432,6 +420,32 @@ namespace Warudo.Plugins.McpBridge {
             }
             _dynamicTriggerKeys.Clear();
 
+            // 0. Tạo 3 nút Profiles cố định ở mục Profiles
+            var savePort = new TriggerPort("profile_save", () => TriggerSaveProfile(), new TriggerProperties {
+                label = "Save Outfit Profile",
+                description = "Save the following settings as an outfit profile. Outfit profiles can be applied on any character in any scene.",
+                sectionTitle = "Profiles",
+                order = 10f
+            });
+            TriggerPortCollection.AddPort(savePort);
+            _dynamicTriggerKeys.Add("profile_save");
+
+            var loadPort = new TriggerPort("profile_load", () => TriggerLoadProfile(), new TriggerProperties {
+                label = "Load Outfit Profile",
+                description = "Load an existing outfit profile. Following settings will be overridden.",
+                order = 11f
+            });
+            TriggerPortCollection.AddPort(loadPort);
+            _dynamicTriggerKeys.Add("profile_load");
+
+            var openPort = new TriggerPort("profile_open", () => OpenProfilesFolder(), new TriggerProperties {
+                label = "Open Outfit Profiles Folder",
+                description = "Open the folder containing outfit profile files in file explorer.",
+                order = 12f
+            });
+            TriggerPortCollection.AddPort(openPort);
+            _dynamicTriggerKeys.Add("profile_open");
+
             float currentOrder = 100f;
 
             // 1. Tạo các nút Wear cho từng item trong mỗi Group
@@ -440,6 +454,7 @@ namespace Warudo.Plugins.McpBridge {
                     var group = Groups[g];
                     if (group == null) continue;
                     var groupName = string.IsNullOrWhiteSpace(group.GroupName) ? $"Group {g + 1}" : group.GroupName;
+                    currentOrder = 100f + (g * 50f);
 
                     if (group.Items != null && group.Items.Length > 0) {
                         for (int i = 0; i < group.Items.Length; i++) {
@@ -467,7 +482,7 @@ namespace Warudo.Plugins.McpBridge {
 
             // 2. Tạo nút Toggle cho Child Visibility Rules
             if (ChildVisibilityRules != null && ChildVisibilityRules.Length > 0) {
-                currentOrder = 200f;
+                currentOrder = 500f;
                 for (int r = 0; r < ChildVisibilityRules.Length; r++) {
                     var rule = ChildVisibilityRules[r];
                     if (rule == null) continue;
@@ -488,7 +503,7 @@ namespace Warudo.Plugins.McpBridge {
 
             // 3. Tạo nút Apply cho Presets
             if (Presets != null && Presets.Length > 0) {
-                currentOrder = 300f;
+                currentOrder = 700f;
                 for (int p = 0; p < Presets.Length; p++) {
                     var preset = Presets[p];
                     if (preset == null) continue;
