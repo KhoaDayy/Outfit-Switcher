@@ -6,6 +6,7 @@ using UnityEngine;
 using Warudo.Core;
 using Warudo.Core.Attributes;
 using Warudo.Core.Data;
+using Warudo.Core.Graphs;
 using Warudo.Core.Scenes;
 using Warudo.Plugins.Core.Assets.Character;
 using Warudo.Plugins.McpBridge.Nodes;
