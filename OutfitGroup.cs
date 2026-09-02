@@ -190,6 +190,37 @@ namespace Warudo.Plugins.McpBridge {
         public OutfitBlendShapeRule[] BlendShapes = Array.Empty<OutfitBlendShapeRule>();
 
         [DataInput]
+        [Label("Transition")]
+        public OutfitTransition Transition = OutfitTransition.Instant;
+
+        [DataInput]
+        [Label("Glow Color")]
+        [HiddenIf(nameof(IsInstantTransition))]
+        public Color GlowColor = new Color(1f, 0.4f, 0.8f, 1f);
+
+        [DataInput]
+        [Label("Intensity")]
+        [Description("Độ sáng đỉnh glow")]
+        [FloatSlider(0f, 10f, 0.1f)]
+        [HiddenIf(nameof(IsInstantTransition))]
+        public float Intensity = 3f;
+
+        [DataInput]
+        [Label("Duration (ms)")]
+        [IntegerSlider(100, 5000, 50)]
+        [HiddenIf(nameof(IsInstantTransition))]
+        public int DurationMs = 600;
+
+        [DataInput]
+        [Label("Peak (0-1)")]
+        [Description("Thời điểm lóa đỉnh (0 - 1)")]
+        [FloatSlider(0.05f, 0.95f, 0.01f)]
+        [HiddenIf(nameof(IsInstantTransition))]
+        public float PeakPercent = 0.42f;
+
+        protected bool IsInstantTransition() => Transition == OutfitTransition.Instant;
+
+        [DataInput]
         [Label("Visible")]
         [Description("Trạng thái hiển thị")]
         public bool Visible = true;
