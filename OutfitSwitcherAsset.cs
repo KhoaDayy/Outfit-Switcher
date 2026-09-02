@@ -425,21 +425,25 @@ namespace Warudo.Plugins.McpBridge {
             _dynamicTriggerKeys.Clear();
 
             // Đảm bảo toàn bộ nút tĩnh thuộc section Setup với thứ tự cố định ở đầu
-            if (TriggerPortCollection.TryGetPort(nameof(SaveProfile), out var savePort)) {
-                savePort.Properties.sectionTitle = "Setup";
-                savePort.Properties.order = 1f;
+            if (TriggerPortCollection.ContainsPort(nameof(SaveProfile))) {
+                var port = TriggerPortCollection.GetPort(nameof(SaveProfile));
+                port.Properties.sectionTitle = "Setup";
+                port.Properties.order = 1f;
             }
-            if (TriggerPortCollection.TryGetPort(nameof(LoadProfile), out var loadPort)) {
-                loadPort.Properties.sectionTitle = "Setup";
-                loadPort.Properties.order = 2f;
+            if (TriggerPortCollection.ContainsPort(nameof(LoadProfile))) {
+                var port = TriggerPortCollection.GetPort(nameof(LoadProfile));
+                port.Properties.sectionTitle = "Setup";
+                port.Properties.order = 2f;
             }
-            if (TriggerPortCollection.TryGetPort(nameof(OpenProfilesFolder), out var openPort)) {
-                openPort.Properties.sectionTitle = "Setup";
-                openPort.Properties.order = 3f;
+            if (TriggerPortCollection.ContainsPort(nameof(OpenProfilesFolder))) {
+                var port = TriggerPortCollection.GetPort(nameof(OpenProfilesFolder));
+                port.Properties.sectionTitle = "Setup";
+                port.Properties.order = 3f;
             }
-            if (TriggerPortCollection.TryGetPort(nameof(RefreshSetup), out var refreshPort)) {
-                refreshPort.Properties.sectionTitle = "Setup";
-                refreshPort.Properties.order = 4f;
+            if (TriggerPortCollection.ContainsPort(nameof(RefreshSetup))) {
+                var port = TriggerPortCollection.GetPort(nameof(RefreshSetup));
+                port.Properties.sectionTitle = "Setup";
+                port.Properties.order = 4f;
             }
 
             float currentOrder = 100f;
