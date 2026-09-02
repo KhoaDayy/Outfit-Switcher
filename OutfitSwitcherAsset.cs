@@ -99,7 +99,7 @@ namespace Warudo.Plugins.McpBridge {
             }
             RebuildDynamicTriggers();
         }
-
+ 
         private void LinkGroups() {
             if (Groups == null) return;
             for (int g = 0; g < Groups.Length; g++) {
@@ -346,29 +346,7 @@ namespace Warudo.Plugins.McpBridge {
 
 
 
-        public string[] GetGroupNames() {
-            if (Groups == null) return Array.Empty<string>();
-            return Groups
-                .Where(g => g != null && !string.IsNullOrWhiteSpace(g.GroupName))
-                .Select(g => g.GroupName)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
 
-        public OutfitItem[] GetItems(string groupName) {
-            if (Groups == null || string.IsNullOrWhiteSpace(groupName)) return Array.Empty<OutfitItem>();
-            var group = Groups.FirstOrDefault(g => g != null && string.Equals(g.GroupName, groupName, StringComparison.OrdinalIgnoreCase));
-            return group?.Items ?? Array.Empty<OutfitItem>();
-        }
-
-        public string[] GetPresetNames() {
-            if (Presets == null) return Array.Empty<string>();
-            return Presets
-                .Where(p => p != null && !string.IsNullOrWhiteSpace(p.PresetName))
-                .Select(p => p.PresetName)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
 
         /// <summary>
         /// Danh sách toàn bộ GameObject non-bone (dưới dạng relative path) cho autocomplete Manual Paths.
