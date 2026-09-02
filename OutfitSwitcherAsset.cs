@@ -278,7 +278,7 @@ namespace Warudo.Plugins.McpBridge {
                             var capturedG = g;
                             var capturedPath = item.Path;
                             var itemName = string.IsNullOrWhiteSpace(item.DisplayName) ? item.Path : item.DisplayName;
-                            var itemKey = $"dynamic_wear_{g}_{i}_{item.Path.GetHashCode()}";
+                            var itemKey = $"dynamic_wear_{g}_{i}";
 
                             var isFirstInGroup = (i == 0);
                             var port = new TriggerPort(itemKey, () => WearItemByPath(capturedG, capturedPath), new TriggerProperties {
@@ -335,6 +335,8 @@ namespace Warudo.Plugins.McpBridge {
                     _dynamicTriggerKeys.Add(presetKey);
                 }
             }
+
+            Broadcast();
         }
 
 
