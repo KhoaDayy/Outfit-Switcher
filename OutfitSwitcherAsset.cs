@@ -710,6 +710,15 @@ namespace Warudo.Plugins.McpBridge {
             return true;
         }
 
+        private void WearByIndex(int groupIndex, int itemIndex) {
+            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) return;
+            var group = Groups[groupIndex];
+            if (group?.Items == null || itemIndex < 0 || itemIndex >= group.Items.Length) return;
+            var item = group.Items[itemIndex];
+            if (item == null) return;
+            WearItemByPath(groupIndex, item.Path);
+        }
+
         /// <summary>Chuyển sang item tiếp theo trong group (vòng tròn)</summary>
         public void SwitchNextItem(int groupIndex) {
             if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) return;
