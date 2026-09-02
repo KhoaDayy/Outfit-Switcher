@@ -83,6 +83,7 @@ namespace Warudo.Plugins.McpBridge {
         // OUTFIT PROFILES (SAVE / LOAD / SHARE)
         // ═══════════════════════════════════════════════════════
 
+        [Section("Profiles", 10)]
         [DataInput]
         [Label("Profile Name")]
         [Description("Tên profile (chọn từ dropdown hoặc nhập tên mới để lưu)")]
