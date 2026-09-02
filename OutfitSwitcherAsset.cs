@@ -94,6 +94,7 @@ namespace Warudo.Plugins.McpBridge {
             if (Character?.GameObject != null) {
                 foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
                     if (group == null) continue;
+                    ScanGroup(group);
                     RestoreLastActiveItem(group);
                 }
                 ApplyChildVisibilityRules();
@@ -172,10 +173,13 @@ namespace Warudo.Plugins.McpBridge {
                 if (reader.TokenType == Newtonsoft.Json.JsonToken.Null) return null;
                 
                 try {
-                    var method = typeof(StructuredData).GetMethod("Create", System.Type.EmptyTypes);
+                    var method = typeof(StructuredData).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                        .FirstOrDefault(m => m.Name == "Create" && m.IsGenericMethod);
                     if (method != null) {
                         var generic = method.MakeGenericMethod(objectType);
-                        var instance = generic.Invoke(null, null);
+                        var parameters = generic.GetParameters();
+                        object[] args = parameters.Length > 0 ? new object[parameters.Length] : null;
+                        var instance = generic.Invoke(null, args);
                         serializer.Populate(reader, instance);
                         return instance;
                     }
