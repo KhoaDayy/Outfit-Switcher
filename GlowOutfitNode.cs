@@ -456,7 +456,7 @@ namespace Warudo.Plugins.McpBridge.Nodes {
             ov.Mat.mainTexture = Texture2D.whiteTexture;
             if (ov.Mat.HasProperty("_MainTex")) ov.Mat.SetTexture("_MainTex", Texture2D.whiteTexture);
             if (ov.Mat.HasProperty("_ZWrite")) ov.Mat.SetInt("_ZWrite", 0);
-            if (ov.Mat.HasProperty("_ZTest")) ov.Mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+            if (ov.Mat.HasProperty("_ZTest")) ov.Mat.SetInt("_ZTest", (int)CompareFunction.LessEqual);
             if (ov.Mat.HasProperty("_TintColor")) ov.Mat.SetColor("_TintColor", Color.white);
             if (ov.Mat.HasProperty("_Color")) ov.Mat.SetColor("_Color", Color.white);
 
