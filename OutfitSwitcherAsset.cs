@@ -44,6 +44,16 @@ namespace Warudo.Plugins.McpBridge {
         public OutfitGroup[] Groups = Array.Empty<OutfitGroup>();
 
         [DataInput]
+        [Label("CHILD VISIBILITY RULES")]
+        [Description("Công tắc dùng chung cho child nằm trong outfit, vd Ears/Tail. Rule được tự áp dụng lại sau mỗi lần đổi outfit.")]
+        public OutfitChildVisibilityRule[] ChildVisibilityRules = Array.Empty<OutfitChildVisibilityRule>();
+
+        [DataInput]
+        [Label("PRESETS")]
+        [Description("Mỗi preset có thể mặc outfit và bật/tắt nhiều phụ kiện bằng một nút.")]
+        public OutfitPreset[] Presets = Array.Empty<OutfitPreset>();
+
+        [DataInput]
         [Label("DEBUG LOGS")]
         [Description("Bật debug log chi tiết cho scan và switch")]
         public bool DebugLogs = false;
@@ -57,15 +67,35 @@ namespace Warudo.Plugins.McpBridge {
         // ═══════════════════════════════════════════════════════
         protected override void OnCreate() {
             base.OnCreate();
-            Watch<CharacterAsset>(nameof(Character), (_, _) => OnCharacterChanged());
-            Watch(nameof(Groups), LinkGroups);
-            LinkGroups();
+            Watch<CharacterAsset>(nameof(Character), (from, to) => OnCharacterChanged(from, to));
+            WatchAll(new[] { nameof(Groups), nameof(ChildVisibilityRules), nameof(Presets) }, LinkRuntimeData);
+            LinkRuntimeData();
         }
 
         /// <summary>
         /// Set OwnerAsset/GroupIndex on all groups and their items.
         /// Called on create, when Groups array changes, and after scan.
         /// </summary>
+        private void LinkRuntimeData() {
+            LinkGroups();
+            if (ChildVisibilityRules != null) {
+                for (var i = 0; i < ChildVisibilityRules.Length; i++) {
+                    var rule = ChildVisibilityRules[i];
+                    if (rule == null) continue;
+                    rule.OwnerAsset = this;
+                    rule.RuleIndex = i;
+                }
+            }
+            if (Presets != null) {
+                for (var i = 0; i < Presets.Length; i++) {
+                    var preset = Presets[i];
+                    if (preset == null) continue;
+                    preset.OwnerAsset = this;
+                    preset.PresetIndex = i;
+                }
+            }
+        }
+
         private void LinkGroups() {
             if (Groups == null) return;
             for (int g = 0; g < Groups.Length; g++) {
@@ -83,7 +113,8 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
-        private void OnCharacterChanged() {
+        private void OnCharacterChanged(CharacterAsset previous, CharacterAsset current) {
+            if (previous != null && previous != current) GlowOutfitNode.CancelAll(previous);
             if (Character?.GameObject == null) {
                 UpdateStatus("⚠️ Chưa chọn Character hoặc Character chưa load.");
                 return;
@@ -91,10 +122,16 @@ namespace Warudo.Plugins.McpBridge {
             UpdateStatus($"✅ Character: **{Character.Name}** — bấm Scan Items trên mỗi group.");
 
             // Auto-restore last active items khi đổi character
-            foreach (var group in Groups) {
+            foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
                 if (group == null) continue;
                 RestoreLastActiveItem(group);
             }
+            ApplyChildVisibilityRules();
+        }
+
+        protected override void OnDestroy() {
+            GlowOutfitNode.CancelAll(Character);
+            base.OnDestroy();
         }
 
         // ═══════════════════════════════════════════════════════
@@ -114,6 +151,11 @@ namespace Warudo.Plugins.McpBridge {
             var root = Character.GameObject.transform;
             var items = new List<OutfitItem>();
             var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Giữ tên tùy chỉnh khi scan lại bằng cách merge theo path ổn định.
+            var previousNames = (group.Items ?? Array.Empty<OutfitItem>())
+                .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Path))
+                .GroupBy(item => item.Path, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(set => set.Key, set => set.First().DisplayName, StringComparer.OrdinalIgnoreCase);
 
             if (group.ScanMode == OutfitScanMode.AvatarFolder) {
                 // Tìm folder bằng path
@@ -133,7 +175,8 @@ namespace Warudo.Plugins.McpBridge {
                         continue;
                     }
                     var item = StructuredData.Create<OutfitItem>(sd => {
-                        sd.DisplayName = child.name;
+                        sd.DisplayName = previousNames.TryGetValue(path, out var previousName) && !string.IsNullOrWhiteSpace(previousName)
+                            ? previousName : child.name;
                         sd.Path = path;
                         sd.IsActive = child.gameObject.activeSelf;
                         sd.OwnerAsset = this;
@@ -147,19 +190,21 @@ namespace Warudo.Plugins.McpBridge {
 
             } else {
                 // Manual mode: từng path
-                foreach (var path in group.ManualPaths ?? Array.Empty<string>()) {
-                    if (string.IsNullOrWhiteSpace(path)) continue;
+                foreach (var configuredPath in group.ManualPaths ?? Array.Empty<string>()) {
+                    if (string.IsNullOrWhiteSpace(configuredPath)) continue;
+                    var target = FindByPath(root, configuredPath);
+                    if (target == null) {
+                        Debug.LogWarning($"[OutfitSwitcher] Manual path not found or ambiguous: {configuredPath}");
+                        continue;
+                    }
+                    var path = GetRelativePath(root, target);
                     if (!seenPaths.Add(path)) {
                         Debug.LogWarning($"[OutfitSwitcher] Manual path trùng lặp: '{path}'. Bỏ qua.");
                         continue;
                     }
-                    var target = FindByPath(root, path);
-                    if (target == null) {
-                        Debug.LogWarning($"[OutfitSwitcher] Manual path not found: {path}");
-                        continue;
-                    }
                     var item = StructuredData.Create<OutfitItem>(sd => {
-                        sd.DisplayName = target.name;
+                        sd.DisplayName = previousNames.TryGetValue(path, out var previousName) && !string.IsNullOrWhiteSpace(previousName)
+                            ? previousName : target.name;
                         sd.Path = path;
                         sd.IsActive = target.gameObject.activeSelf;
                         sd.OwnerAsset = this;
@@ -182,10 +227,15 @@ namespace Warudo.Plugins.McpBridge {
 
             SetDataInput(nameof(Groups), Groups, broadcast: true);
 
-            // Rebuild dynamic triggers cho items
+            // Rebuild runtime links cho items
             RebuildItemTriggers(group);
 
-            UpdateStatus($"✅ Group **{group.GroupName}**: tìm thấy **{items.Count}** items.");
+            var duplicateNames = items.GroupBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .Where(set => set.Count() > 1).Select(set => set.Key).ToArray();
+            var suffix = duplicateNames.Length == 0
+                ? ""
+                : $" Warning: duplicate names: {string.Join(", ", duplicateNames)}; use PATH in automation.";
+            UpdateStatus($"Scanned **{group.GroupName}**: **{items.Count}** items.{suffix}");
         }
 
         // ═══════════════════════════════════════════════════════
@@ -193,8 +243,133 @@ namespace Warudo.Plugins.McpBridge {
         // ═══════════════════════════════════════════════════════
 
         private void RebuildItemTriggers(OutfitGroup group) {
-            LinkGroups();
+            LinkRuntimeData();
             Broadcast();
+        }
+
+        [Trigger]
+        [Label("SCAN ALL GROUPS")]
+        public void ScanAllGroups() {
+            if (Character?.GameObject == null) {
+                ReportError("Character chưa được gán hoặc chưa load.");
+                return;
+            }
+            foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
+                if (group != null) ScanGroup(group);
+            }
+            ValidateConfiguration();
+        }
+
+        [Trigger]
+        [Label("SUGGEST FOLDERS")]
+        [Description("Tìm các folder có tên thường dùng như Outfit, Clothes, Hair, Accessories để hỗ trợ thiết lập ban đầu.")]
+        public void SuggestFolders() {
+            var root = Character?.GameObject?.transform;
+            if (root == null) {
+                ReportError("Character chưa được gán hoặc chưa load.");
+                return;
+            }
+            var keywords = new[] { "outfit", "clothes", "cloth", "hair", "accessories", "accessory", "costume" };
+            var suggestions = EnumerateDescendants(root)
+                .Where(transform => transform.childCount > 0 && keywords.Any(keyword =>
+                    transform.name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0))
+                .Select(transform => GetRelativePath(root, transform)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            UpdateStatus(suggestions.Length == 0
+                ? "No common outfit folders detected. Use a full avatar-relative path."
+                : "Suggested folders:\n- " + string.Join("\n- ", suggestions));
+        }
+
+        [Trigger]
+        [Label("VALIDATE CONFIGURATION")]
+        public void ValidateConfiguration() {
+            var errors = new List<string>();
+            var warnings = new List<string>();
+            if (Character?.GameObject == null) errors.Add("Character chưa được gán hoặc chưa load");
+            if (Groups == null || Groups.Length == 0) errors.Add("Chưa có group nào");
+
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var paths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
+                if (group == null) continue;
+                if (string.IsNullOrWhiteSpace(group.GroupName)) errors.Add("Có group chưa đặt tên");
+                else if (!names.Add(group.GroupName)) errors.Add($"Trùng group name: {group.GroupName}");
+                if (group.Items == null || group.Items.Length == 0) warnings.Add($"{group.GroupName}: chưa scan hoặc không có item");
+                foreach (var item in group.Items ?? Array.Empty<OutfitItem>()) {
+                    if (item == null) continue;
+                    if (string.IsNullOrWhiteSpace(item.Path)) {
+                        errors.Add($"{group.GroupName}: có item chưa có path");
+                        continue;
+                    }
+                    if (paths.TryGetValue(item.Path, out var owner))
+                        errors.Add($"Path '{item.Path}' nằm trong cả '{owner}' và '{group.GroupName}'");
+                    else paths[item.Path] = group.GroupName;
+                    if (Character?.GameObject != null && FindByPath(Character.GameObject.transform, item.Path) == null)
+                        errors.Add($"Không resolve được path: {item.Path}");
+                }
+            }
+
+            ValidateChildVisibilityRules(errors, warnings);
+            ValidatePresets(errors, warnings);
+
+            var message = errors.Count == 0
+                ? $"Configuration valid. {warnings.Count} warning(s)."
+                : $"Configuration has {errors.Count} error(s).";
+            if (errors.Count > 0) message += "\n\n- " + string.Join("\n- ", errors);
+            if (warnings.Count > 0) message += "\n\nWarnings:\n- " + string.Join("\n- ", warnings);
+            UpdateStatus(message);
+        }
+
+        private void ValidateChildVisibilityRules(List<string> errors, List<string> warnings) {
+            var ruleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var root = Character?.GameObject?.transform;
+            foreach (var rule in ChildVisibilityRules ?? Array.Empty<OutfitChildVisibilityRule>()) {
+                if (rule == null) continue;
+                if (string.IsNullOrWhiteSpace(rule.RuleName)) errors.Add("Có child visibility rule chưa đặt tên");
+                else if (!ruleNames.Add(rule.RuleName)) errors.Add($"Trùng child visibility rule: {rule.RuleName}");
+
+                var childNames = new HashSet<string>((rule.ChildNames ?? Array.Empty<string>())
+                    .Where(name => !string.IsNullOrWhiteSpace(name)), StringComparer.OrdinalIgnoreCase);
+                if (childNames.Count == 0) {
+                    warnings.Add($"Rule '{rule.RuleName}': chưa có child name");
+                    continue;
+                }
+                if (root != null && !EnumerateDescendants(root).Any(child => childNames.Contains(child.name))) {
+                    warnings.Add($"Rule '{rule.RuleName}': không tìm thấy child name nào trên character");
+                }
+            }
+        }
+
+        private void ValidatePresets(List<string> errors, List<string> warnings) {
+            var presetNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var preset in Presets ?? Array.Empty<OutfitPreset>()) {
+                if (preset == null) continue;
+                if (string.IsNullOrWhiteSpace(preset.PresetName)) errors.Add("Có preset chưa đặt tên");
+                else if (!presetNames.Add(preset.PresetName)) errors.Add($"Trùng preset name: {preset.PresetName}");
+                if (preset.Entries == null || preset.Entries.Length == 0) {
+                    warnings.Add($"Preset '{preset.PresetName}': chưa có entry");
+                    continue;
+                }
+                foreach (var entry in preset.Entries) {
+                    if (entry == null) continue;
+                    var groupIndex = FindGroupIndex(entry.GroupName);
+                    if (groupIndex < 0) {
+                        errors.Add($"Preset '{preset.PresetName}': không tìm thấy group '{entry.GroupName}'");
+                        continue;
+                    }
+                    var group = Groups[groupIndex];
+                    if (!TryFindItem(group, entry.ItemNameOrPath, out _, out var itemError)) {
+                        errors.Add($"Preset '{preset.PresetName}': {itemError}");
+                        continue;
+                    }
+                    if (entry.Action == OutfitPresetAction.Toggle && group.GroupType != OutfitGroupType.Toggle) {
+                        errors.Add($"Preset '{preset.PresetName}': Toggle chỉ dùng cho Toggle group '{group.GroupName}'");
+                    }
+                    if (entry.Action == OutfitPresetAction.Disable &&
+                        group.GroupType == OutfitGroupType.Single && !group.AllowNone) {
+                        errors.Add($"Preset '{preset.PresetName}': group '{group.GroupName}' cần ALLOW NONE để Disable");
+                    }
+                }
+            }
         }
 
         // ═══════════════════════════════════════════════════════
@@ -212,7 +387,7 @@ namespace Warudo.Plugins.McpBridge {
                 Debug.LogWarning("[OutfitSwitcher] Character null!");
                 return;
             }
-            if (groupIndex < 0 || groupIndex >= Groups.Length) {
+            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) {
                 Debug.LogWarning($"[OutfitSwitcher] Invalid group index: {groupIndex}");
                 return;
             }
@@ -276,17 +451,129 @@ namespace Warudo.Plugins.McpBridge {
 
         /// <summary>Overload nhận tên group thay vì index</summary>
         public void WearItem(string groupName, string itemName) {
-            var idx = FindGroupIndex(groupName);
-            if (idx >= 0) {
-                WearItem(idx, itemName);
-            } else {
-                Debug.LogWarning($"[OutfitSwitcher] Group not found: '{groupName}'");
+            if (!TryWearItem(groupName, itemName, out var error)) {
+                ReportError(error);
             }
+        }
+
+        /// <summary>API có kết quả rõ ràng cho Blueprint/automation.</summary>
+        public bool TryWearItem(string groupName, string itemName, out string error) {
+            error = "";
+            if (Character?.GameObject == null) {
+                error = "Character chưa được gán hoặc chưa load.";
+                return false;
+            }
+            var idx = FindGroupIndex(groupName);
+            if (idx < 0) {
+                error = $"Không tìm thấy group '{groupName}'.";
+                return false;
+            }
+            var group = Groups[idx];
+            if (!TryFindItem(group, itemName, out var item, out error)) return false;
+            WearResolvedItem(group, item);
+            return true;
+        }
+
+        public void SetItemActiveByPath(int groupIndex, string path, bool active) {
+            if (!TrySetItemActiveByPath(groupIndex, path, active, out var error)) {
+                ReportError(error);
+            }
+        }
+
+        public bool TrySetItemActive(string groupName, string itemNameOrPath, bool active, out string error) {
+            error = "";
+            var groupIndex = FindGroupIndex(groupName);
+            if (groupIndex < 0) {
+                error = $"Không tìm thấy group '{groupName}'.";
+                return false;
+            }
+            if (!TryFindItem(Groups[groupIndex], itemNameOrPath, out var item, out error)) return false;
+            return TrySetItemActiveByPath(groupIndex, item.Path, active, out error);
+        }
+
+        private bool TrySetItemActiveByPath(int groupIndex, string path, bool active, out string error) {
+            error = "";
+            if (Character?.GameObject == null) {
+                error = "Character chưa được gán hoặc chưa load.";
+                return false;
+            }
+            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) {
+                error = $"Group index không hợp lệ: {groupIndex}.";
+                return false;
+            }
+            var group = Groups[groupIndex];
+            var item = group?.Items?.FirstOrDefault(candidate => candidate != null &&
+                string.Equals(candidate.Path, path, StringComparison.OrdinalIgnoreCase));
+            if (item == null) {
+                error = $"Không tìm thấy item path '{path}'.";
+                return false;
+            }
+            if (active && group.GroupType == OutfitGroupType.Single) {
+                SwitchSingleItem(group, item);
+                return true;
+            }
+            var target = FindByPath(Character.GameObject.transform, item.Path);
+            if (target == null) {
+                error = $"Không resolve được path '{item.Path}'.";
+                return false;
+            }
+            if (!active && group.GroupType == OutfitGroupType.Single && !group.AllowNone) {
+                error = $"Group '{group.GroupName}' chưa bật ALLOW NONE.";
+                return false;
+            }
+            target.gameObject.SetActive(active);
+            ApplyChildVisibilityRules();
+            UpdateItemStates(group);
+            SaveGroupActiveState(group);
+            UpdateStatus($"{(active ? "Enabled" : "Disabled")} **{group.GroupName} / {item.DisplayName}**");
+            return true;
+        }
+
+        public void DisableAllItems(int groupIndex) {
+            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) return;
+            var group = Groups[groupIndex];
+            if (group == null) return;
+            if (group.GroupType == OutfitGroupType.Single && !group.AllowNone) {
+                ReportError($"Group '{group.GroupName}' chưa bật ALLOW NONE.");
+                return;
+            }
+            var root = Character?.GameObject?.transform;
+            if (root == null) {
+                ReportError("Character chưa được gán hoặc chưa load.");
+                return;
+            }
+            foreach (var item in group.Items ?? Array.Empty<OutfitItem>()) {
+                var target = item == null ? null : FindByPath(root, item.Path);
+                if (target != null) target.gameObject.SetActive(false);
+            }
+            UpdateItemStates(group);
+            SaveGroupActiveState(group);
+            UpdateStatus($"Disabled all items in **{group.GroupName}**");
+        }
+
+        public bool DisableAllItems(string groupName, out string error) {
+            error = "";
+            if (Character?.GameObject == null) {
+                error = "Character chưa được gán hoặc chưa load.";
+                return false;
+            }
+            var groupIndex = FindGroupIndex(groupName);
+            if (groupIndex < 0) {
+                error = $"Không tìm thấy group '{groupName}'.";
+                return false;
+            }
+            var group = Groups[groupIndex];
+            if (group.GroupType == OutfitGroupType.Single && !group.AllowNone) {
+                error = $"Group '{groupName}' chưa bật ALLOW NONE.";
+                return false;
+            }
+            DisableAllItems(groupIndex);
+            return true;
         }
 
         /// <summary>Chuyển sang item tiếp theo trong group (vòng tròn)</summary>
         public void SwitchNextItem(int groupIndex) {
-            if (groupIndex < 0 || groupIndex >= Groups.Length) return;
+            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) return;
             var group = Groups[groupIndex];
             if (group?.Items == null || group.Items.Length == 0) return;
 
@@ -296,13 +583,16 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         public void SwitchNextItem(string groupName) {
-            var idx = FindGroupIndex(groupName);
-            if (idx >= 0) SwitchNextItem(idx);
+            if (!TrySwitchNextItem(groupName, out var error)) ReportError(error);
+        }
+
+        public bool TrySwitchNextItem(string groupName, out string error) {
+            return TryNavigateGroup(groupName, "next", out error);
         }
 
         /// <summary>Chuyển sang item trước đó trong group (vòng tròn)</summary>
         public void SwitchPreviousItem(int groupIndex) {
-            if (groupIndex < 0 || groupIndex >= Groups.Length) return;
+            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) return;
             var group = Groups[groupIndex];
             if (group?.Items == null || group.Items.Length == 0) return;
 
@@ -312,13 +602,16 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         public void SwitchPreviousItem(string groupName) {
-            var idx = FindGroupIndex(groupName);
-            if (idx >= 0) SwitchPreviousItem(idx);
+            if (!TrySwitchPreviousItem(groupName, out var error)) ReportError(error);
+        }
+
+        public bool TrySwitchPreviousItem(string groupName, out string error) {
+            return TryNavigateGroup(groupName, "previous", out error);
         }
 
         /// <summary>Chuyển sang item ngẫu nhiên khác trong group</summary>
         public void SwitchRandomItem(int groupIndex) {
-            if (groupIndex < 0 || groupIndex >= Groups.Length) return;
+            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) return;
             var group = Groups[groupIndex];
             if (group?.Items == null || group.Items.Length == 0) return;
             if (group.Items.Length == 1) {
@@ -336,8 +629,35 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         public void SwitchRandomItem(string groupName) {
+            if (!TrySwitchRandomItem(groupName, out var error)) ReportError(error);
+        }
+
+        public bool TrySwitchRandomItem(string groupName, out string error) {
+            return TryNavigateGroup(groupName, "random", out error);
+        }
+
+        private bool TryNavigateGroup(string groupName, string direction, out string error) {
+            error = "";
             var idx = FindGroupIndex(groupName);
-            if (idx >= 0) SwitchRandomItem(idx);
+            if (idx < 0) {
+                error = $"Không tìm thấy group '{groupName}'.";
+                return false;
+            }
+            var group = Groups[idx];
+            if (group?.Items == null || group.Items.Length == 0) {
+                error = $"Group '{groupName}' chưa có item; hãy scan trước.";
+                return false;
+            }
+            if (group.GroupType == OutfitGroupType.Toggle) {
+                error = $"Action {direction} không dành cho Toggle group '{groupName}'. Hãy dùng Enable/Disable/Toggle item.";
+                return false;
+            }
+            switch (direction) {
+                case "previous": SwitchPreviousItem(idx); break;
+                case "random": SwitchRandomItem(idx); break;
+                default: SwitchNextItem(idx); break;
+            }
+            return true;
         }
 
         private int GetActiveItemIndex(OutfitGroup group) {
@@ -380,15 +700,19 @@ namespace Warudo.Plugins.McpBridge {
                     onPeak: () => {
                         if (target != null)
                             target.gameObject.SetActive(!target.gameObject.activeSelf);
+                        ApplyChildVisibilityRules();
                         UpdateItemStates(group);
                         SaveGroupActiveState(group);
                     },
                     glowKey: "item:" + item.Path,
                     flushOnCancel: true,
-                    debugLog: DebugLogs
+                    debugLog: DebugLogs,
+                    ignoreInactiveRenderers: false,
+                    excludedPaths: group.GlowExcludedPaths
                 ).Forget();
             } else {
                 target.gameObject.SetActive(!target.gameObject.activeSelf);
+                ApplyChildVisibilityRules();
                 UpdateItemStates(group);
                 SaveGroupActiveState(group);
             }
@@ -432,7 +756,9 @@ namespace Warudo.Plugins.McpBridge {
             // Nếu target đã active VÀ không còn item nào khác trong group đang active -> Đã đúng trạng thái switch, không cần làm gì
             if (targetAlreadyActive && activeOldItems.Count == 0) {
                 if (DebugLogs) Debug.Log($"[OutfitSwitcher] '{targetItem.DisplayName}' already active & all others off, skipping");
+                ApplyChildVisibilityRules();
                 UpdateItemStates(group);
+                SaveGroupActiveState(group);
                 return;
             }
 
@@ -454,12 +780,15 @@ namespace Warudo.Plugins.McpBridge {
                             if (go != null) go.SetActive(false);
                         }
                         if (targetGo != null) targetGo.gameObject.SetActive(true);
+                        ApplyChildVisibilityRules();
                         UpdateItemStates(group);
                         SaveGroupActiveState(group);
                     },
                     swapPaths: newPaths,
                     glowKey: "group:" + group.GroupName,
-                    debugLog: DebugLogs
+                    debugLog: DebugLogs,
+                    ignoreInactiveRenderers: group.IgnoreInactiveChildren,
+                    excludedPaths: group.GlowExcludedPaths
                 ).Forget();
 
             } else if (group.Transition == OutfitTransition.Glow && activeOldItems.Count == 0) {
@@ -468,6 +797,7 @@ namespace Warudo.Plugins.McpBridge {
                     if (go != null) go.SetActive(false);
                 }
                 targetGo.gameObject.SetActive(true);
+                ApplyChildVisibilityRules();
                 UpdateItemStates(group);
                 SaveGroupActiveState(group);
 
@@ -480,7 +810,9 @@ namespace Warudo.Plugins.McpBridge {
                     group.PeakPercent,
                     onPeak: () => { },
                     glowKey: "group:" + group.GroupName,
-                    debugLog: DebugLogs
+                    debugLog: DebugLogs,
+                    ignoreInactiveRenderers: group.IgnoreInactiveChildren,
+                    excludedPaths: group.GlowExcludedPaths
                 ).Forget();
 
             } else {
@@ -489,6 +821,7 @@ namespace Warudo.Plugins.McpBridge {
                     if (go != null) go.SetActive(false);
                 }
                 targetGo.gameObject.SetActive(true);
+                ApplyChildVisibilityRules();
                 UpdateItemStates(group);
                 SaveGroupActiveState(group);
             }
@@ -497,6 +830,132 @@ namespace Warudo.Plugins.McpBridge {
 
             if (DebugLogs)
                 Debug.Log($"[OutfitSwitcher] Switched to '{targetItem.DisplayName}' in group '{group.GroupName}' (deactivated {allOtherGos.Count} other items)");
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // CHILD VISIBILITY (EARS / TAIL) & PRESETS
+        // ═══════════════════════════════════════════════════════
+
+        public void ToggleChildVisibilityRule(int ruleIndex) {
+            if (ChildVisibilityRules == null || ruleIndex < 0 || ruleIndex >= ChildVisibilityRules.Length) return;
+            var rule = ChildVisibilityRules[ruleIndex];
+            if (rule != null) SetChildVisibilityRule(ruleIndex, !rule.Visible);
+        }
+
+        public void SetChildVisibilityRule(int ruleIndex, bool visible) {
+            if (ChildVisibilityRules == null || ruleIndex < 0 || ruleIndex >= ChildVisibilityRules.Length) return;
+            var rule = ChildVisibilityRules[ruleIndex];
+            if (rule == null) return;
+            rule.SetDataInput(nameof(OutfitChildVisibilityRule.Visible), visible, broadcast: true);
+            ApplyChildVisibilityRule(rule);
+            UpdateStatus($"**{rule.RuleName}**: {(visible ? "shown" : "hidden")}");
+        }
+
+        private void ApplyChildVisibilityRules() {
+            foreach (var rule in ChildVisibilityRules ?? Array.Empty<OutfitChildVisibilityRule>()) {
+                if (rule != null) ApplyChildVisibilityRule(rule);
+            }
+        }
+
+        private void ApplyChildVisibilityRule(OutfitChildVisibilityRule rule) {
+            var root = Character?.GameObject?.transform;
+            if (root == null || rule?.ChildNames == null) return;
+            var names = new HashSet<string>(rule.ChildNames.Where(name => !string.IsNullOrWhiteSpace(name)),
+                StringComparer.OrdinalIgnoreCase);
+            if (names.Count == 0) return;
+            foreach (var child in EnumerateDescendants(root)) {
+                if (names.Contains(child.name)) child.gameObject.SetActive(rule.Visible);
+            }
+        }
+
+        public void ApplyPreset(int presetIndex) {
+            if (!TryApplyPreset(presetIndex, out var error)) ReportError(error);
+        }
+
+        public bool TryApplyPreset(string presetName, out string error) {
+            error = "";
+            if (Presets == null) {
+                error = "Chưa có preset nào.";
+                return false;
+            }
+            for (var i = 0; i < Presets.Length; i++) {
+                if (Presets[i] != null && string.Equals(Presets[i].PresetName, presetName, StringComparison.OrdinalIgnoreCase)) {
+                    return TryApplyPreset(i, out error);
+                }
+            }
+            error = $"Không tìm thấy preset '{presetName}'.";
+            return false;
+        }
+
+        private bool TryApplyPreset(int presetIndex, out string error) {
+            error = "";
+            if (Presets == null || presetIndex < 0 || presetIndex >= Presets.Length) {
+                error = "Preset index không hợp lệ.";
+                return false;
+            }
+            var preset = Presets[presetIndex];
+            if (preset == null) {
+                error = "Preset không hợp lệ.";
+                return false;
+            }
+            var errors = new List<string>();
+            foreach (var entry in preset.Entries ?? Array.Empty<OutfitPresetEntry>()) {
+                if (entry == null) continue;
+                string error;
+                bool success;
+                switch (entry.Action) {
+                    case OutfitPresetAction.Disable:
+                        success = TrySetItemActive(entry.GroupName, entry.ItemNameOrPath, false, out error);
+                        break;
+                    case OutfitPresetAction.Toggle:
+                        var groupIndex = FindGroupIndex(entry.GroupName);
+                        if (groupIndex < 0) {
+                            success = false;
+                            error = $"Không tìm thấy group '{entry.GroupName}'.";
+                        } else if (Groups[groupIndex].GroupType != OutfitGroupType.Toggle) {
+                            success = false;
+                            error = $"Toggle chỉ dùng cho Toggle group '{entry.GroupName}'.";
+                        } else {
+                            success = TryWearItem(entry.GroupName, entry.ItemNameOrPath, out error);
+                        }
+                        break;
+                    default:
+                        success = TrySetItemActive(entry.GroupName, entry.ItemNameOrPath, true, out error);
+                        break;
+                }
+                if (!success) errors.Add(error);
+            }
+            if (errors.Count == 0) {
+                UpdateStatus($"Applied preset **{preset.PresetName}**");
+                return true;
+            }
+            error = $"Preset '{preset.PresetName}' partially failed: {string.Join("; ", errors)}";
+            return false;
+        }
+
+        public string[] GetGroupNames() {
+            return (Groups ?? Array.Empty<OutfitGroup>())
+                .Where(group => group != null && !string.IsNullOrWhiteSpace(group.GroupName))
+                .Select(group => group.GroupName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+
+        public OutfitItem[] GetItems(string groupName) {
+            var index = FindGroupIndex(groupName);
+            return index < 0 ? Array.Empty<OutfitItem>() : Groups[index].Items ?? Array.Empty<OutfitItem>();
+        }
+
+        public string[] GetPresetNames() {
+            return (Presets ?? Array.Empty<OutfitPreset>())
+                .Where(preset => preset != null && !string.IsNullOrWhiteSpace(preset.PresetName))
+                .Select(preset => preset.PresetName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+
+        private static IEnumerable<Transform> EnumerateDescendants(Transform root) {
+            if (root == null) yield break;
+            foreach (Transform child in root) {
+                yield return child;
+                foreach (var descendant in EnumerateDescendants(child)) yield return descendant;
+            }
         }
 
         // ═══════════════════════════════════════════════════════
@@ -509,19 +968,26 @@ namespace Warudo.Plugins.McpBridge {
             if (root == null) return;
 
             var activeNames = new List<string>();
+            var activePaths = new List<string>();
             foreach (var item in group.Items) {
                 if (item == null) continue;
                 var go = FindByPath(root, item.Path);
                 if (go != null && go.gameObject.activeSelf) {
                     activeNames.Add(item.DisplayName);
+                    activePaths.Add(item.Path);
                 }
             }
 
             if (group.GroupType == OutfitGroupType.Single) {
-                if (activeNames.Count == 1) group.LastActiveItem = activeNames[0];
-                else if (activeNames.Count == 0) group.LastActiveItem = "";
+                group.LastActiveItem = activeNames.Count == 1 ? activeNames[0] : "";
+                group.LastActivePath = activePaths.Count == 1 ? activePaths[0] : "";
             }
             group.LastActiveItems = activeNames.ToArray();
+            group.LastActivePaths = activePaths.ToArray();
+            group.SetDataInput(nameof(OutfitGroup.LastActiveItem), group.LastActiveItem, broadcast: false);
+            group.SetDataInput(nameof(OutfitGroup.LastActivePath), group.LastActivePath, broadcast: false);
+            group.SetDataInput(nameof(OutfitGroup.LastActiveItems), group.LastActiveItems, broadcast: false);
+            group.SetDataInput(nameof(OutfitGroup.LastActivePaths), group.LastActivePaths, broadcast: false);
         }
 
         private void RestoreLastActiveItem(OutfitGroup group) {
@@ -544,27 +1010,39 @@ namespace Warudo.Plugins.McpBridge {
             var root = Character.GameObject.transform;
 
             if (group.GroupType == OutfitGroupType.Single) {
-                if (string.IsNullOrEmpty(group.LastActiveItem)) return;
+                var savedPath = group.LastActivePath;
+                if (string.IsNullOrEmpty(savedPath) && !string.IsNullOrEmpty(group.LastActiveItem)) {
+                    savedPath = group.Items.FirstOrDefault(item => item != null &&
+                        string.Equals(item.DisplayName, group.LastActiveItem, StringComparison.OrdinalIgnoreCase))?.Path;
+                }
+                if (string.IsNullOrEmpty(savedPath)) return;
                 foreach (var item in group.Items) {
                     if (item == null) continue;
                     var go = FindByPath(root, item.Path);
                     if (go == null) continue;
 
-                    bool shouldBeActive = string.Equals(item.DisplayName, group.LastActiveItem,
-                        StringComparison.OrdinalIgnoreCase);
+                    bool shouldBeActive = string.Equals(item.Path, savedPath, StringComparison.OrdinalIgnoreCase);
                     go.gameObject.SetActive(shouldBeActive);
                     item.IsActive = shouldBeActive;
                 }
             } else {
-                // Restore cho Toggle group (multi-wear)
-                if (group.LastActiveItems == null || group.LastActiveItems.Length == 0) return;
-                var activeSet = new HashSet<string>(group.LastActiveItems, StringComparer.OrdinalIgnoreCase);
+                // Restore cho Toggle group (multi-wear), ưu tiên path ổn định.
+                var savedPaths = group.LastActivePaths;
+                var activeSet = new HashSet<string>(savedPaths ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+                if (activeSet.Count == 0 && group.LastActiveItems != null) {
+                    foreach (var item in group.Items) {
+                        if (item != null && group.LastActiveItems.Any(name =>
+                            string.Equals(name, item.DisplayName, StringComparison.OrdinalIgnoreCase))) {
+                            activeSet.Add(item.Path);
+                        }
+                    }
+                }
                 foreach (var item in group.Items) {
                     if (item == null) continue;
                     var go = FindByPath(root, item.Path);
                     if (go == null) continue;
 
-                    bool shouldBeActive = activeSet.Contains(item.DisplayName);
+                    bool shouldBeActive = activeSet.Contains(item.Path);
                     go.gameObject.SetActive(shouldBeActive);
                     item.IsActive = shouldBeActive;
                 }
@@ -615,15 +1093,68 @@ namespace Warudo.Plugins.McpBridge {
         // ═══════════════════════════════════════════════════════
 
         private OutfitItem FindItem(OutfitGroup group, string nameOrPath) {
-            if (group?.Items == null) return null;
-            foreach (var item in group.Items) {
-                if (item == null) continue;
-                if (string.Equals(item.DisplayName, nameOrPath, StringComparison.OrdinalIgnoreCase))
-                    return item;
-                if (string.Equals(item.Path, nameOrPath, StringComparison.OrdinalIgnoreCase))
-                    return item;
+            return TryFindItem(group, nameOrPath, out var item, out _) ? item : null;
+        }
+
+        private static bool TryFindItem(OutfitGroup group, string nameOrPath,
+                out OutfitItem item, out string error) {
+            item = null;
+            error = "";
+            if (group?.Items == null || group.Items.Length == 0) {
+                error = $"Group '{group?.GroupName ?? ""}' chưa có item; hãy scan trước.";
+                return false;
             }
-            return null;
+            if (string.IsNullOrWhiteSpace(nameOrPath)) {
+                error = "Item name/path đang trống.";
+                return false;
+            }
+
+            // Path là định danh ổn định và luôn được ưu tiên trước display name.
+            item = group.Items.FirstOrDefault(candidate => candidate != null &&
+                string.Equals(candidate.Path, nameOrPath, StringComparison.OrdinalIgnoreCase));
+            if (item != null) return true;
+
+            var nameMatches = group.Items.Where(candidate => candidate != null &&
+                string.Equals(candidate.DisplayName, nameOrPath, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (nameMatches.Length == 1) {
+                item = nameMatches[0];
+                return true;
+            }
+            if (nameMatches.Length > 1) {
+                error = $"Item name '{nameOrPath}' bị trùng trong group '{group.GroupName}'. Hãy dùng full path.";
+                return false;
+            }
+            error = $"Không tìm thấy item '{nameOrPath}' trong group '{group.GroupName}'.";
+            return false;
+        }
+
+        public void PreviewItemByPath(int groupIndex, string path) {
+            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) {
+                ReportError("Group index không hợp lệ.");
+                return;
+            }
+            var root = Character?.GameObject?.transform;
+            var target = root == null ? null : FindByPath(root, path);
+            if (target == null) {
+                ReportError($"Không resolve được path '{path}'.");
+                return;
+            }
+            var renderers = target.GetComponentsInChildren<Renderer>(true);
+            var readableMeshes = 0;
+            var meshCount = 0;
+            var vertices = 0;
+            foreach (var renderer in renderers) {
+                Mesh mesh = null;
+                if (renderer is SkinnedMeshRenderer smr) mesh = smr.sharedMesh;
+                else if (renderer is MeshRenderer) mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
+                if (mesh == null) continue;
+                meshCount++;
+                vertices += mesh.vertexCount;
+                if (mesh.isReadable) readableMeshes++;
+            }
+            UpdateStatus($"Preview **{target.name}**\n\nPath: `{GetRelativePath(root, target)}`\n\n" +
+                         $"Renderers: **{renderers.Length}**, meshes: **{meshCount}**, vertices: **{vertices}**, readable meshes: **{readableMeshes}**. " +
+                         (meshCount > 0 && readableMeshes == meshCount ? "Full sweep available." : "Some meshes will use uniform glow fallback or cannot be overlaid."));
         }
 
         private void UpdateItemStates(OutfitGroup group) {
@@ -643,6 +1174,12 @@ namespace Warudo.Plugins.McpBridge {
 
         private void UpdateStatus(string msg) {
             SetDataInput(nameof(Status), msg, broadcast: true);
+        }
+
+        private void ReportError(string message) {
+            if (string.IsNullOrWhiteSpace(message)) return;
+            UpdateStatus($"Error: **{message}**");
+            Debug.LogWarning("[OutfitSwitcher] " + message);
         }
 
         /// <summary>

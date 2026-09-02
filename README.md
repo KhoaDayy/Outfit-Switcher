@@ -1,101 +1,264 @@
-# 👗 Warudo Outfit Switcher
+# Warudo Outfit Switcher
 
-Hệ thống quản lý và chuyển đổi trang phục / phụ kiện (Outfit, Hair, Accessories) chuyên nghiệp dành cho **Warudo**, hỗ trợ hiệu ứng chuyển đổi phát sáng mượt mà (**BiRP Additive Glow Transition**), tự động quét hierarchy avatar và tích hợp toàn diện với Blueprint & Stream Deck.
+Hệ thống quản lý outfit, tóc và phụ kiện tháo rời cho **Warudo**. Plugin hỗ trợ scan avatar hierarchy, chuyển outfit dạng single-select, bật/tắt phụ kiện độc lập, preset nhiều nhóm và hiệu ứng glow trên Built-in Render Pipeline.
 
----
+## Tính năng
 
-## ✨ Tính năng nổi bật (Key Features)
+- Không giới hạn số group và item trong dữ liệu.
+- `Switch`: chỉ một item active trong group.
+- `Toggle`: nhiều phụ kiện có thể active đồng thời.
+- Nút `WEAR / TOGGLE`, `ENABLE`, `DISABLE` và `PREVIEW INFO` trên từng item.
+- Scan một group hoặc `SCAN ALL GROUPS`.
+- `SUGGEST FOLDERS` hỗ trợ tìm nhanh folder Outfit, Clothes, Hair và Accessories.
+- `VALIDATE CONFIGURATION` phát hiện group trùng tên, path trùng hoặc không resolve được.
+- Blueprint autocomplete cho group, item và preset.
+- Blueprint có flow `Success`, `Failed`, output `Last Error`, đồng thời giữ `Exit` để tương thích graph cũ.
+- Preset có thể thay đổi outfit, tóc và nhiều phụ kiện bằng một nút.
+- Child Visibility Rules giữ tai/đuôi bật hoặc tắt khi chuyển outfit.
+- Glow có thể bỏ qua child inactive hoặc các path bị loại trừ.
+- State được lưu theo canonical avatar-relative path thay vì chỉ dựa vào tên hiển thị.
+- Tên item do người dùng tùy chỉnh được giữ khi scan lại nếu path không đổi.
 
-- 🗂️ **Quản lý đa nhóm (Multi-Group Support)**:
-  - Phân chia trang phục thành nhiều nhóm độc lập (ví dụ: *Outfit*, *Hair*, *Glasses*, *Hats*, *Accessories*) — không giới hạn số group / số item.
-- 🔍 **Tự động quét Avatar Hierarchy (Smart Scanner)**:
-  - **Avatar Folder Mode**: Chỉ cần nhập đường dẫn thư mục cha (ví dụ `Clothes/Outfits`), hệ thống tự động quét tất cả các GameObject con thành từng bộ đồ.
-  - **Manual Paths Mode**: Nhập danh sách đường dẫn thủ công cho các avatar có cấu trúc phân tán.
-- 🔄 **2 Chế độ hoạt động linh hoạt (Group Types)**:
-  - **Switch (Single Active)**: Chế độ đổi đồ chuẩn — kích hoạt một bộ đồ mới sẽ tự động tắt toàn bộ các bộ đồ khác trong cùng nhóm.
-  - **Toggle (Multi-Wear)**: Bật/tắt độc lập từng món — lý tưởng cho phụ kiện, áo khoác, kính mắt, nón...
-- ✨ **Hiệu ứng chuyển đổi Glow tuyệt đẹp (BiRP Native Transition)**:
-  - Tạo hiệu ứng quét sáng từ dưới lên trên qua vertex color và mesh overlay độc lập (`Particles/Additive`).
-  - **Không** can thiệp hay thay đổi material gốc của avatar, không yêu cầu shader tự viết.
-  - Tùy chỉnh tự do: Màu Glow (`GlowColor`), Độ sáng đỉnh (`Intensity`), Thời gian chuyển (`DurationMs`), Điểm lóa cực đại (`PeakPercent`).
-  - Hỗ trợ fallback mượt mà cho các avatar tắt tính năng đọc mesh (`isReadable = false`).
-- 🔘 **Giao diện Dynamic Triggers trực quan**:
-  - Sau khi quét, từng món đồ hiển thị trong danh sách **Items** của group với đúng tên đồ và nút **👗 WEAR / TOGGLE** riêng ngay trên Asset Inspector.
-  - Thêm nút **Next / Prev Item** cho 3 group đầu tiên để chuyển đồ nhanh.
-- 🛡️ **Bảo vệ khi đổi avatar (Character Guard)**:
-  - Trạng thái đã lưu chỉ được restore khi đúng character đã scan — tránh bật/tắt nhầm object trùng tên trên avatar khác. Đổi avatar mới chỉ cần bấm lại **Scan Items**.
-- 🧩 **Tích hợp Blueprint Node mạnh mẽ**:
-  - `Outfit Switcher` Node: Hỗ trợ `Switch To Item`, `Next Item`, `Previous Item`, và `Random Item`.
-  - `GLOW OUTFIT` Node: Node độc lập để phát hiệu ứng glow chuyển đồ tùy ý trong graph.
-- 🎮 **Tương thích Stream Deck & MCP / WebSocket**:
-  - Dễ dàng gán phím tắt Stream Deck hoặc điều khiển tự động qua API.
+## Cài đặt bằng Playground
 
----
+1. Cài **.NET 8 SDK** theo yêu cầu của Warudo Playground.
+2. Sao chép các file sau vào:
 
-## 📁 Cấu trúc mã nguồn (Repository Structure)
+   ```text
+   <Warudo>/Warudo_Data/StreamingAssets/Playground/
+   ```
+
+   ```text
+   OutfitGroup.cs
+   OutfitSwitcherAsset.cs
+   OutfitSwitchNode.cs
+   GlowOutfitNode.cs
+   OutfitSwitcherPlugin.cs
+   ```
+
+3. Mở hoặc khởi động lại Warudo và kiểm tra console compile.
+4. Thêm asset **Outfit Switcher** trong category `Hasukatsu`.
+
+Khi phát hành bằng Warudo Mod SDK, `OutfitSwitcherPlugin.cs` là plugin entry point và đăng ký asset/node types. Không cần tự tạo DLL .NET Framework rời khỏi quy trình Mod SDK.
+
+## Thiết lập nhanh
+
+1. Chọn `Character`.
+2. Bấm `SUGGEST FOLDERS` nếu chưa biết hierarchy path.
+3. Thêm group trong `Groups`.
+4. Chọn scan mode:
+   - `Avatar Folder`: mỗi child trực tiếp của folder là một item.
+   - `Manual Paths`: nhập từng avatar-relative path.
+5. Chọn group type:
+   - `Switch`: outfit, tóc hoặc các lựa chọn loại trừ nhau.
+   - `Toggle`: kính, mũ, áo khoác, tai, đuôi hoặc phụ kiện tháo rời.
+6. Bấm `SCAN ITEMS` hoặc `SCAN ALL GROUPS`.
+7. Bấm `VALIDATE CONFIGURATION`.
+8. Mở `Items` và dùng các nút trên từng item.
+9. Lưu Scene thủ công sau khi cấu hình vì Warudo không tự lưu scene.
+
+## Cấu hình outfit và phụ kiện tháo rời
+
+Hierarchy khuyến nghị:
+
+```text
+Avatar
+├── Outfits
+│   ├── Casual
+│   ├── School
+│   └── Maid
+└── Accessories
+    ├── Glasses
+    ├── Hat
+    └── Jacket
+```
+
+Cấu hình:
+
+```text
+Group Outfit
+  Scan Mode: Avatar Folder
+  Folder Path: Outfits
+  Group Type: Switch
+
+Group Accessories
+  Scan Mode: Avatar Folder
+  Folder Path: Accessories
+  Group Type: Toggle
+```
+
+Nếu tai/đuôi nằm bên trong từng outfit:
+
+```text
+Outfits
+├── Casual
+│   ├── Clothes
+│   ├── Ears
+│   └── Tail
+└── Maid
+    ├── Clothes
+    ├── Ears
+    └── Tail
+```
+
+Thêm `Child Visibility Rules`:
+
+```text
+Rule Name: Ears
+Child Names:
+- Ears
+Visible: false
+
+Rule Name: Tail
+Child Names:
+- Tail
+Visible: false
+```
+
+Các nút `SHOW`, `HIDE`, `TOGGLE` của rule sẽ áp dụng cho tất cả child có tên chính xác trên avatar, kể cả child thuộc outfit đang inactive. Khi đổi outfit, rule được tự áp dụng lại.
+
+Nếu tai/đuôi là GameObject riêng và chỉ muốn điều khiển từng path, tạo group `Toggle` với `Manual Paths`:
+
+```text
+Outfits/Casual/Ears
+Outfits/Casual/Tail
+Outfits/Maid/Ears
+Outfits/Maid/Tail
+```
+
+Nếu tai/đuôi nằm chung trong một `SkinnedMeshRenderer`, `SetActive` không thể tách riêng. Cần tách mesh trong Blender/Unity hoặc điều khiển bằng blendshape.
+
+## Glow không làm hiện lại tai/đuôi đã tháo
+
+Trong group Outfit:
+
+```text
+Ignore Inactive Children: true
+Glow Excluded Paths:
+- Ears
+- Tail
+```
+
+`Ignore Inactive Children` bỏ qua renderer inactive. `Glow Excluded Paths` hỗ trợ:
+
+- Full path: `Outfits/Casual/Ears`
+- Tên child: `Ears`
+
+Với group phụ kiện Toggle, plugin vẫn có thể dựng overlay cho item đang tắt để chạy hiệu ứng trước khi bật.
+
+## Allow None
+
+Với group `Switch`, bật `ALLOW NONE` nếu muốn cho phép tắt toàn bộ item, ví dụ tháo mọi loại mũ. Sau đó dùng `DISABLE ALL` hoặc Blueprint action tương ứng.
+
+Group `Toggle` luôn có thể tắt toàn bộ item.
+
+## Preset
+
+Thêm một entry trong `Presets`:
+
+```text
+Preset Name: Casual Full
+Entries:
+- Group Name: Outfit
+  Item Name Or Path: Outfits/Casual
+  Action: Enable
+- Group Name: Hair
+  Item Name Or Path: Hair/Ponytail
+  Action: Enable
+- Group Name: Accessories
+  Item Name Or Path: Accessories/Glasses
+  Action: Enable
+- Group Name: Accessories
+  Item Name Or Path: Accessories/Hat
+  Action: Disable
+```
+
+Bấm `APPLY PRESET` trên preset hoặc dùng Blueprint action `Apply Preset`.
+
+Nên dùng path trong preset để tránh nhầm khi nhiều item có cùng display name. Action `Toggle` chỉ hợp lệ với group `Toggle`; với group `Switch`, dùng `Enable` để chọn item hoặc bật `Allow None` trước khi dùng `Disable`.
+
+## Blueprint
+
+Thêm node `Hasukatsu / Outfit Switcher`, chọn asset và action:
+
+- `Wear / Toggle Item`
+- `Enable Item`
+- `Disable Item`
+- `Disable All In Group`
+- `Next Item`
+- `Previous Item`
+- `Random Item`
+- `Apply Preset`
+
+Group, item và preset được lấy bằng autocomplete từ asset đã chọn. Item lưu path ổn định dù label hiển thị cả tên và path.
+
+Outputs:
+
+- `Exit (Compatibility)`: luôn chạy để graph cũ tiếp tục hoạt động.
+- `Success`: chạy khi thao tác hợp lệ.
+- `Failed`: chạy khi có lỗi.
+- `Last Error`: nội dung lỗi gần nhất.
+- `Succeeded`: trạng thái thao tác gần nhất.
+
+`Next`, `Previous` và `Random` chỉ dành cho group `Switch`. Với group `Toggle`, dùng action xác định `Enable`, `Disable` hoặc `Wear / Toggle`.
+
+## Preview và xử lý lỗi
+
+`PREVIEW INFO` không thay đổi avatar. Nó hiển thị:
+
+- Canonical path.
+- Số renderer.
+- Tổng vertex.
+- Số mesh readable.
+- Khả năng dùng full sweep hay uniform fallback.
+
+Các lỗi phổ biến:
+
+### Folder hoặc item không tìm thấy
+
+- Dùng path tương đối từ root avatar.
+- Bấm `SUGGEST FOLDERS`.
+- Nếu có nhiều object cùng leaf name, phải dùng full path. Plugin không còn tự chọn object đầu tiên.
+
+### Glow làm hiện phụ kiện đã tắt
+
+- Bật `Ignore Inactive Children`.
+- Thêm tên hoặc path vào `Glow Excluded Paths`.
+
+### Glow gây giảm FPS
+
+- Giảm số renderer trong item.
+- Dùng `Instant` cho avatar nặng.
+- Dùng `PREVIEW INFO` để kiểm tra vertex count.
+- Tránh chạy nhiều transition cùng group liên tục.
+
+### Mesh không readable
+
+Plugin vẫn dùng uniform glow fallback nhưng không có sweep theo chiều cao.
+
+### Đổi character
+
+Group chỉ restore state khi character hiện tại khớp character đã scan. Hãy scan lại các group sau khi chọn avatar khác.
+
+## Cấu trúc source
 
 ```text
 Outfit-Switcher/
-├── OutfitGroup.cs           # Định nghĩa cấu trúc dữ liệu, Enums, OutfitItem và OutfitGroup
-├── OutfitSwitcherAsset.cs   # Asset chính: Quản lý quét, chuyển đổi trang phục và dynamic UI triggers
-├── OutfitSwitchNode.cs      # Blueprint Node: Điều khiển chuyển đổi trang phục từ Node Graph
-├── GlowOutfitNode.cs        # Engine hiệu ứng Glow BiRP và Blueprint Node chuyển đồ có glow
-└── README.md                # Tài liệu hướng dẫn sử dụng
+├── OutfitGroup.cs
+├── OutfitSwitcherAsset.cs
+├── OutfitSwitchNode.cs
+├── GlowOutfitNode.cs
+├── OutfitSwitcherPlugin.cs
+└── README.md
 ```
 
----
+## Yêu cầu
 
-## 🚀 Hướng dẫn cài đặt (Installation)
+- Warudo với Built-in Render Pipeline.
+- Unity 2021.3 runtime của Warudo.
+- .NET 8 SDK cho Playground.
+- UniTask có sẵn trong Warudo Core.
 
-### Cách 1: Sử dụng qua Playground (Khuyên dùng)
-1. Tải về 4 file `.cs` trong repository này.
-2. Sao chép cả 4 file vào thư mục Playground của Warudo:
-   ```text
-   <Đường_dẫn_cài_đặt_Warudo>/Warudo_Data/StreamingAssets/Playground/
-   ```
-3. Khởi động lại hoặc mở Warudo, hệ thống sẽ tự động biên dịch mã nguồn C# ngay khi khởi chạy.
+## Tác giả
 
-### Cách 2: Biên dịch thành Plugin DLL
-- Thêm 4 file vào dự án Warudo Plugin C# (.NET Framework 4.7.2 / Unity 2021.3) và build file `.dll` vào thư mục `Plugins/`.
-
----
-
-## 📖 Hướng dẫn sử dụng (Quick Start)
-
-### 1. Thêm Asset vào Scene
-1. Trong Warudo, mở bảng điều khiển bên trái, chọn **Add Asset** ➔ tìm **Outfit Switcher** (Category: `Hasukatsu`).
-2. Tại mục **Character**, chọn nhân vật avatar bạn muốn quản lý trang phục.
-
-### 2. Thiết lập Group & Quét đồ
-1. Trong danh sách **Groups**, bấm dấu `+` để thêm một nhóm mới.
-2. Cấu hình thông số nhóm:
-   - **Group Name**: Tên nhóm (ví dụ: `Outfit`, `Hair`, `Accessories`).
-   - **Scan Mode**:
-     - Chọn `Avatar Folder` và nhập đường dẫn thư mục cha trong avatar (ví dụ `Clothes/Outfits`).
-     - Hoặc chọn `Manual Paths` và nhập từng đường dẫn GameObject.
-   - **Group Type**: Chọn `Switch` (chỉ mặc 1 bộ) hoặc `Toggle` (mặc nhiều món tự do).
-   - **Transition**: Chọn `Glow` hoặc `Instant`.
-   - Cài đặt màu sắc và thời gian phát sáng nếu dùng `Glow`.
-3. Bấm **Scan Items** để hệ thống quét toàn bộ danh sách đồ.
-
-### 3. Đổi trang phục
-- **Cách 1 (Trực tiếp)**: Mở danh sách **Items** trong group, bấm nút **👗 WEAR / TOGGLE** trên từng item; hoặc dùng **Next / Prev Item** để xoay vòng.
-- **Cách 2 (Blueprint Graph)**:
-  - Thêm node **Outfit Switcher** (`NodeType: Hasukatsu -> Outfit Switcher`).
-  - Nối tham chiếu `Switcher` tới `OutfitSwitcherAsset`.
-  - Chọn Action (`Switch To Item`, `Next Item`, `Previous Item`, `Random Item`) và kích hoạt từ bất kỳ sự kiện Flow nào (phím bấm, Stream Deck, trigger...).
-
----
-
-## 🛠️ Yêu cầu hệ thống (Requirements)
-
-- **Warudo** phiên bản hỗ trợ Built-in Render Pipeline (BiRP).
-- Unity 2021.3 LTS Runtime.
-- UniTask / Cysharp.Threading.Tasks (đã tích hợp sẵn trong Warudo Core).
-
----
-
-## 📜 Giấy phép & Tác giả (Author & License)
-
-- Tác giả: **KhoaDayy** / **Hasukatsu**
-- Phát triển dành riêng cho cộng đồng Warudo VTubers.
+KhoaDayy / Hasukatsu — phát triển cho cộng đồng Warudo VTubers.

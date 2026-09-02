@@ -80,21 +80,34 @@ namespace Warudo.Plugins.McpBridge.Nodes {
         [DataInput]
         [Label("EXTRUSION (M)")]
         [Description("Độ phồng overlay theo pháp tuyến đỉnh (mặc định 0.005 = 5mm).")]
+        [FloatSlider(0f, 0.03f, 0.001f)]
         public float Extrusion = 0.005f;
 
         [DataInput]
         [Label("DURATION (MS)")]
+        [IntegerSlider(100, 5000, 50)]
         public int DurationMs = 600;
 
         [DataInput]
         [Label("PEAK (0-1)")]
         [Description("Thời điểm lóa cực đại tính theo tỉ lệ Duration (0.42 ≈ 0.25s với 600ms). Cú cắt đổi đồ xảy ra đúng lúc này.")]
+        [FloatSlider(0.05f, 0.95f, 0.01f)]
         public float PeakPercent = 0.42f;
 
         [DataInput]
         [Label("SWAP GAMEOBJECT PATHS (ĐỒ MỚI)")]
         [Description("Path tới outfit MỚI sẽ hiện sau peak. Nếu có, tại peak overlay đồ cũ bị hủy và overlay đồ mới được tạo từ các path này — đồ mới lộ ra với glow hạ dần (đúng timeline swap). Để trống = overlay đồ cũ fade nốt (không glow đồ mới).")]
         public string[] SwapGameObjectPaths;
+
+        [DataInput]
+        [Label("IGNORE INACTIVE CHILDREN")]
+        [Description("Bỏ qua renderer đang inactive, hữu ích để tai/đuôi đã tháo không lóe sáng khi đổi outfit.")]
+        public bool IgnoreInactiveChildren = false;
+
+        [DataInput]
+        [Label("EXCLUDED PATHS")]
+        [Description("Path hoặc tên child không được glow, vd Ears, Tail.")]
+        public string[] ExcludedPaths = Array.Empty<string>();
 
         [DataInput]
         [Label("DEBUG LOGS")]
@@ -117,7 +130,9 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                 glowKey: key,
                 flushOnCancel: false,
                 extrusion: Extrusion,
-                debugLog: DebugLogs).Forget();
+                debugLog: DebugLogs,
+                ignoreInactiveRenderers: IgnoreInactiveChildren,
+                excludedPaths: ExcludedPaths).Forget();
             return Exit; // flow chính không bị chặn — glow chạy nền
         }
 
@@ -154,7 +169,8 @@ namespace Warudo.Plugins.McpBridge.Nodes {
         public static async UniTask Glow(CharacterAsset character, string[] paths,
                 Color color, float intensity, int durationMs, float peakPercent,
                 Action onPeak, string[] swapPaths = null, string glowKey = "",
-                bool flushOnCancel = false, float extrusion = 0.005f, bool debugLog = false) {
+                bool flushOnCancel = false, float extrusion = 0.005f, bool debugLog = false,
+                bool ignoreInactiveRenderers = false, string[] excludedPaths = null) {
             if (character?.GameObject == null) return;
 
             // Cancel glow cũ có CÙNG key của character này (nếu có) trước khi start mới
@@ -163,8 +179,8 @@ namespace Warudo.Plugins.McpBridge.Nodes {
             CancellationTokenSource cts;
             lock (_activeGlows) {
                 if (_activeGlows.TryGetValue(cancelKey, out var old)) {
+                    // Task sở hữu CTS sẽ tự Dispose trong finally.
                     old.Cancel();
-                    old.Dispose();
                 }
                 cts = new CancellationTokenSource();
                 _activeGlows[cancelKey] = cts;
@@ -189,11 +205,11 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                 spawned.Add(container);
 
                 // 2. Overlay của bộ HIỆN TẠI (đồ 1)
-                BuildOverlays(character, paths, container.transform, overlays, spawned, extrusion, debugLog);
+                BuildOverlays(character, paths, container.transform, overlays, spawned, extrusion, debugLog,
+                    ignoreInactiveRenderers, excludedPaths);
                 if (overlays.Count == 0) {
                     if (debugLog) Debug.LogWarning("[GlowOutfit] Không tạo được overlay nào cho đồ cũ, gọi onPeak để swap.");
-                    peakFired = true;
-                    onPeak?.Invoke();
+                    FirePeakOnce(ref peakFired, onPeak, debugLog);
                     return;
                 }
 
@@ -219,8 +235,7 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                     var sweep = Mathf.Lerp(-0.15f, 1.15f, Mathf.Clamp01(t / peak));
 
                     if (!peakFired && t >= peak) {
-                        peakFired = true;
-                        onPeak?.Invoke(); // ← MATCH CUT: SetActive swap tại đây
+                        FirePeakOnce(ref peakFired, onPeak, debugLog); // MATCH CUT: SetActive swap tại đây
 
                         // Đổi overlay sang mesh đồ MỚI: hủy overlay đồ 1 (nó
                         // "biến mất"), tạo overlay đồ 2 — sinh ra ở env=1,
@@ -232,7 +247,8 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                                 if (ov.MeshCopy != null) { spawned.Remove(ov.MeshCopy); UnityEngine.Object.Destroy(ov.MeshCopy); }
                             }
                             overlays.Clear();
-                            BuildOverlays(character, swapPaths, container.transform, overlays, spawned, extrusion, debugLog);
+                            BuildOverlays(character, swapPaths, container.transform, overlays, spawned, extrusion, debugLog,
+                                ignoreInactiveRenderers, excludedPaths);
                             if (overlays.Count == 0 && debugLog) {
                                 Debug.LogWarning("[GlowOutfit] Swap overlay: 0 renderer tìm thấy — kiểm tra lại SWAP GAMEOBJECT PATHS!");
                             }
@@ -312,14 +328,14 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                     elapsed += UnityEngine.Time.deltaTime;
                 }
             }
+            catch (Exception e) {
+                Debug.LogWarning("[GlowOutfit] Transition failed: " + e.Message);
+            }
             finally {
-                // Nếu bị cancel trước khi kịp swap/toggle tại peak và có cờ flushOnCancel -> hoàn tất cú swap ngay lập tức
-                if (!peakFired && flushOnCancel) {
-                    try {
-                        onPeak?.Invoke();
-                    } catch (Exception e) {
-                        if (debugLog) Debug.LogWarning("[GlowOutfit] Flush on cancel failed: " + e.Message);
-                    }
+                // Bảo đảm callback chạy đúng một lần khi animation hoàn thành, kể cả
+                // frame hitch nhảy thẳng qua duration. Khi cancel chỉ flush nếu được yêu cầu.
+                if (!peakFired && (!ct.IsCancellationRequested || flushOnCancel)) {
+                    FirePeakOnce(ref peakFired, onPeak, debugLog);
                 }
 
                 // 4. Dọn dẹp — material gốc chưa từng bị đụng, chỉ hủy overlay.
@@ -342,7 +358,8 @@ namespace Warudo.Plugins.McpBridge.Nodes {
         /// </summary>
         private static void BuildOverlays(CharacterAsset character, string[] paths,
                 Transform container, List<Overlay> overlays, List<UnityEngine.Object> spawned,
-                float extrusion = 0.005f, bool debugLog = false) {
+                float extrusion = 0.005f, bool debugLog = false,
+                bool ignoreInactiveRenderers = false, string[] excludedPaths = null) {
             var seen = new HashSet<Renderer>();
             foreach (var path in paths ?? Array.Empty<string>()) {
                 if (string.IsNullOrWhiteSpace(path)) continue;
@@ -357,6 +374,8 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                 foreach (var r in renderers) {
                     if (r == null) continue;
                     if (r.name.EndsWith("_GlowOverlay")) continue;
+                    if (ignoreInactiveRenderers && !r.gameObject.activeInHierarchy) continue;
+                    if (IsExcluded(character.GameObject.transform, r.transform, excludedPaths)) continue;
                     if (!seen.Add(r)) continue; // đã tạo overlay cho renderer này rồi
                     var ov = CreateOverlay(r, container, extrusion, debugLog);
                     if (ov == null) continue;
@@ -484,8 +503,10 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                 dup.sharedMesh = useMesh;
                 dup.bones = srcSmr.bones;
                 dup.rootBone = srcSmr.rootBone;
-                dup.updateWhenOffscreen = true;
-                dup.localBounds = new Bounds(Vector3.zero, Vector3.one * 100f);
+                dup.updateWhenOffscreen = srcSmr.updateWhenOffscreen;
+                var overlayBounds = srcSmr.localBounds;
+                overlayBounds.Expand(Mathf.Max(0f, extrusion) * 4f);
+                dup.localBounds = overlayBounds;
                 if (srcSmr.sharedMesh != null)
                     for (var i = 0; i < srcSmr.sharedMesh.blendShapeCount; i++)
                         dup.SetBlendShapeWeight(i, srcSmr.GetBlendShapeWeight(i));
@@ -502,6 +523,49 @@ namespace Warudo.Plugins.McpBridge.Nodes {
             ov.Renderer.shadowCastingMode = ShadowCastingMode.Off;
             ov.Renderer.receiveShadows = false;
             return ov;
+        }
+
+        private static void FirePeakOnce(ref bool peakFired, Action onPeak, bool debugLog) {
+            if (peakFired) return;
+            peakFired = true;
+            try {
+                onPeak?.Invoke();
+            } catch (Exception e) {
+                Debug.LogWarning("[GlowOutfit] Peak callback failed: " + e.Message);
+            }
+        }
+
+        public static void CancelAll(CharacterAsset character) {
+            if (character == null) return;
+            lock (_activeGlows) {
+                var keys = new List<(CharacterAsset, string)>();
+                foreach (var pair in _activeGlows) {
+                    if (pair.Key.Item1 == character) {
+                        pair.Value.Cancel();
+                        keys.Add(pair.Key);
+                    }
+                }
+                // Không dispose tại đây; task sở hữu CTS sẽ dispose trong finally.
+                foreach (var key in keys) _activeGlows.Remove(key);
+            }
+        }
+
+        private static bool IsExcluded(Transform root, Transform target, string[] excludedPaths) {
+            if (root == null || target == null || excludedPaths == null || excludedPaths.Length == 0) return false;
+            var relativePath = OutfitSwitcherAsset.GetRelativePath(root, target).Trim('/');
+            foreach (var configured in excludedPaths) {
+                if (string.IsNullOrWhiteSpace(configured)) continue;
+                var excluded = configured.Trim().Trim('/');
+                if (string.Equals(relativePath, excluded, StringComparison.OrdinalIgnoreCase) ||
+                    relativePath.StartsWith(excluded + "/", StringComparison.OrdinalIgnoreCase)) return true;
+
+                var current = target;
+                while (current != null && current != root) {
+                    if (string.Equals(current.name, excluded, StringComparison.OrdinalIgnoreCase)) return true;
+                    current = current.parent;
+                }
+            }
+            return false;
         }
 
         private static float Smooth01(float x) {
@@ -531,11 +595,17 @@ namespace Warudo.Plugins.McpBridge.Nodes {
             var hit = SearchByExactRelativePath(root.transform, cleanPath, root.transform);
             if (hit != null) return hit.gameObject;
 
-            // 4. Fallback: tìm theo tên object cuối cùng (Leaf Name)
+            // 4. Fallback theo leaf name chỉ khi kết quả là duy nhất. Không âm
+            // thầm lấy object đầu tiên vì avatar thường có nhiều Body/Hair/Mesh.
             var lastSlash = cleanPath.LastIndexOf('/');
             var leafName = lastSlash >= 0 ? cleanPath.Substring(lastSlash + 1) : cleanPath;
-            hit = SearchByName(root.transform, leafName);
-            return hit != null ? hit.gameObject : null;
+            var matches = new List<Transform>();
+            SearchAllByName(root.transform, leafName, matches);
+            if (matches.Count == 1) return matches[0].gameObject;
+            if (matches.Count > 1) {
+                Debug.LogWarning($"[GlowOutfit] Ambiguous leaf name '{leafName}' ({matches.Count} matches). Use a full avatar-relative path.");
+            }
+            return null;
         }
 
         private static Transform SearchByExactRelativePath(Transform current, string targetPath, Transform root) {
@@ -550,15 +620,13 @@ namespace Warudo.Plugins.McpBridge.Nodes {
             return null;
         }
 
-        private static Transform SearchByName(Transform current, string leafName) {
+        private static void SearchAllByName(Transform current, string leafName, List<Transform> matches) {
             foreach (Transform child in current) {
                 if (string.Equals(child.name, leafName, StringComparison.OrdinalIgnoreCase)) {
-                    return child;
+                    matches.Add(child);
                 }
-                var found = SearchByName(child, leafName);
-                if (found != null) return found;
+                SearchAllByName(child, leafName, matches);
             }
-            return null;
         }
     }
 }
