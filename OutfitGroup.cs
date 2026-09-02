@@ -54,7 +54,7 @@ namespace Warudo.Plugins.McpBridge {
     /// DisplayName hiển thị trong UI và trigger buttons.
     /// Được tạo bằng StructuredData.Create khi scan.
     /// </summary>
-    public class OutfitItem : StructuredData {
+    public class OutfitItem : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
         [Label("NAME")]
@@ -74,6 +74,10 @@ namespace Warudo.Plugins.McpBridge {
         public OutfitSwitcherAsset OwnerAsset;
         public int GroupIndex = -1;
 
+        public string GetHeader() {
+            return string.IsNullOrWhiteSpace(DisplayName) ? (string.IsNullOrWhiteSpace(Path) ? "Item" : Path) : DisplayName;
+        }
+
         [Trigger]
         [Label("👗 WEAR")]
         [Description("Mặc item này (Switch group: tắt toàn bộ item khác; Toggle group: bật/tắt độc lập)")]
@@ -87,7 +91,7 @@ namespace Warudo.Plugins.McpBridge {
     /// Quy tắc hiển thị child dùng chung giữa các outfit. Ví dụ một rule
     /// "Ears" với ChildNames = ["Ears"] có thể giữ tai tắt khi đổi outfit.
     /// </summary>
-    public class OutfitChildVisibilityRule : StructuredData {
+    public class OutfitChildVisibilityRule : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
         [Label("RULE NAME")]
@@ -114,6 +118,10 @@ namespace Warudo.Plugins.McpBridge {
         public OutfitSwitcherAsset OwnerAsset;
         public int RuleIndex = -1;
 
+        public string GetHeader() {
+            return string.IsNullOrWhiteSpace(RuleName) ? "Child Visibility Rule" : $"{RuleName} ({(Visible ? "Visible" : "Hidden")})";
+        }
+
         [Trigger]
         [Label("TOGGLE")]
         public void Toggle() {
@@ -121,7 +129,7 @@ namespace Warudo.Plugins.McpBridge {
         }
     }
 
-    public class OutfitPresetEntry : StructuredData {
+    public class OutfitPresetEntry : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
         [Label("GROUP NAME")]
@@ -134,9 +142,13 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         [Label("ACTION")]
         public OutfitPresetAction Action = OutfitPresetAction.Enable;
+
+        public string GetHeader() {
+            return $"{GroupName} / {(string.IsNullOrWhiteSpace(ItemNameOrPath) ? "(Item)" : ItemNameOrPath)} ({Action})";
+        }
     }
 
-    public class OutfitPreset : StructuredData {
+    public class OutfitPreset : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
         [Label("PRESET NAME")]
@@ -148,6 +160,10 @@ namespace Warudo.Plugins.McpBridge {
 
         public OutfitSwitcherAsset OwnerAsset;
         public int PresetIndex = -1;
+
+        public string GetHeader() {
+            return string.IsNullOrWhiteSpace(PresetName) ? "Preset" : PresetName;
+        }
 
         [Trigger]
         [Label("APPLY PRESET")]
@@ -165,7 +181,7 @@ namespace Warudo.Plugins.McpBridge {
     /// Bấm trigger ScanItems để quét. Mỗi item trong danh sách Items có nút
     /// 👗 WEAR riêng; Next/Prev nhanh cho 3 group đầu nằm trên Asset.
     /// </summary>
-    public class OutfitGroup : StructuredData {
+    public class OutfitGroup : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
         [Label("GROUP NAME")]
@@ -272,6 +288,10 @@ namespace Warudo.Plugins.McpBridge {
         // Runtime links — được set lại bởi OutfitSwitcherAsset.LinkGroups()
         public OutfitSwitcherAsset OwnerAsset;
         public int GroupIndex = -1;
+
+        public string GetHeader() {
+            return string.IsNullOrWhiteSpace(GroupName) ? "Outfit Group" : GroupName;
+        }
 
         // ── Trigger ──
 
