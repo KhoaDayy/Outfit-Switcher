@@ -246,18 +246,7 @@ namespace Warudo.Plugins.McpBridge {
             Broadcast();
         }
 
-        [Trigger]
-        [Label("SCAN ALL GROUPS")]
-        public void ScanAllGroups() {
-            if (Character?.GameObject == null) {
-                ReportError("Character chưa được gán hoặc chưa load.");
-                return;
-            }
-            foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
-                if (group != null) ScanGroup(group);
-            }
-            ValidateConfiguration();
-        }
+
 
         /// <summary>
         /// Danh sách folder thực tế trên character cho autocomplete FOLDER PATH.
