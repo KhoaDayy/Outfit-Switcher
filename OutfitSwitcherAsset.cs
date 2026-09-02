@@ -34,10 +34,32 @@ namespace Warudo.Plugins.McpBridge {
     )]
     public class OutfitSwitcherAsset : Asset {
 
+        // ═══════════════════════════════════════════════════════
+        // OUTFIT PROFILES (SAVE / LOAD / SHARE)
+        // ═══════════════════════════════════════════════════════
+
+        [Section("Profiles", 0)]
+        [DataInput]
+        [Label("Profile Name")]
+        [Description("Tên profile (chọn từ dropdown hoặc nhập tên mới để lưu)")]
+        [AutoComplete(nameof(AutoCompleteProfileNames), forceSelection: false)]
+        public string ProfileName = "Default";
+
+        protected UniTask<AutoCompleteList> AutoCompleteProfileNames() {
+            var folder = GetProfilesFolder();
+            if (!Directory.Exists(folder)) return UniTask.FromResult(AutoCompleteList.Single(new List<AutoCompleteEntry>()));
+            var files = Directory.GetFiles(folder, "*.json")
+                .Select(f => Path.GetFileNameWithoutExtension(f))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(files));
+        }
+
         [Section("Setup", 10)]
         [DataInput]
         [Label("Character")]
-        [Description("Chọn nhân vật để điều khiển outfit")]
         public CharacterAsset Character;
 
         [DataInput]
@@ -81,28 +103,7 @@ namespace Warudo.Plugins.McpBridge {
             Broadcast();
         }
 
-        // ═══════════════════════════════════════════════════════
-        // OUTFIT PROFILES (SAVE / LOAD / SHARE)
-        // ═══════════════════════════════════════════════════════
 
-        [Section("Profiles", 0)]
-        [DataInput]
-        [Label("Profile Name")]
-        [Description("Tên profile (chọn từ dropdown hoặc nhập tên mới để lưu)")]
-        [AutoComplete(nameof(AutoCompleteProfileNames), forceSelection: false)]
-        public string ProfileName = "Default";
-
-        protected UniTask<AutoCompleteList> AutoCompleteProfileNames() {
-            var folder = GetProfilesFolder();
-            if (!Directory.Exists(folder)) return UniTask.FromResult(AutoCompleteList.Single(new List<AutoCompleteEntry>()));
-            var files = Directory.GetFiles(folder, "*.json")
-                .Select(f => Path.GetFileNameWithoutExtension(f))
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-                .Select(name => new AutoCompleteEntry { label = name, value = name })
-                .ToList();
-            return UniTask.FromResult(AutoCompleteList.Single(files));
-        }
 
         private class WarudoValueProvider : Newtonsoft.Json.Serialization.IValueProvider {
             private readonly System.Reflection.PropertyInfo _pi;
@@ -194,7 +195,7 @@ namespace Warudo.Plugins.McpBridge {
             
             public override bool CanWrite => false;
         }
- 
+
         [Trigger]
         [Label("Save Outfit Profile")]
         [Description("Lưu cấu hình hiện tại thành file profile theo Profile Name ở trên.")]
