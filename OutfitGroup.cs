@@ -87,6 +87,55 @@ namespace Warudo.Plugins.McpBridge {
     }
 
 
+    public class OutfitBlendShapeRule : StructuredData, ICollapsibleStructuredData {
+
+        [DataInput]
+        [Label("Skinned Mesh (Optional)")]
+        [Description("Để trống để áp dụng cho tất cả mesh")]
+        [AutoComplete(nameof(AutoCompleteSkinnedMesh), forceSelection: false)]
+        public string SkinnedMeshName = "";
+
+        protected UniTask<AutoCompleteList> AutoCompleteSkinnedMesh() {
+            var entries = (OwnerAsset?.GetAvatarSkinnedMeshNames() ?? Array.Empty<string>())
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
+        }
+
+        [DataInput]
+        [Label("BlendShape Name")]
+        [Description("Tên BlendShape cần đổi")]
+        [AutoComplete(nameof(AutoCompleteBlendShapeName), forceSelection: false)]
+        public string BlendShapeName = "";
+
+        protected UniTask<AutoCompleteList> AutoCompleteBlendShapeName() {
+            var entries = (OwnerAsset?.GetAvatarBlendShapeNames(SkinnedMeshName) ?? Array.Empty<string>())
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
+        }
+
+        [DataInput]
+        [Label("Visible Value")]
+        [Description("Giá trị khi rule bật (0 - 100)")]
+        [FloatSlider(0f, 100f, 1f)]
+        public float VisibleValue = 100f;
+
+        [DataInput]
+        [Label("Hidden Value")]
+        [Description("Giá trị khi rule tắt (0 - 100)")]
+        [FloatSlider(0f, 100f, 1f)]
+        public float HiddenValue = 0f;
+
+        public OutfitSwitcherAsset OwnerAsset;
+
+        public string GetHeader() {
+            return string.IsNullOrWhiteSpace(BlendShapeName)
+                ? "BlendShape"
+                : $"{BlendShapeName} ({(string.IsNullOrWhiteSpace(SkinnedMeshName) ? "All" : SkinnedMeshName)}: {VisibleValue}/{HiddenValue})";
+        }
+    }
+
     /// <summary>
     /// Quy tắc hiển thị child dùng chung giữa các outfit. Ví dụ một rule
     /// "Ears" với ChildNames = ["Ears"] có thể giữ tai tắt khi đổi outfit.
@@ -109,6 +158,11 @@ namespace Warudo.Plugins.McpBridge {
                 .ToList();
             return UniTask.FromResult(AutoCompleteList.Single(entries));
         }
+
+        [DataInput]
+        [Label("BlendShapes")]
+        [Description("Danh sách BlendShape tự đổi theo trạng thái")]
+        public OutfitBlendShapeRule[] BlendShapes = Array.Empty<OutfitBlendShapeRule>();
 
         [DataInput]
         [Label("Visible")]

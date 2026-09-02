@@ -99,6 +99,11 @@ namespace Warudo.Plugins.McpBridge {
                     if (rule == null) continue;
                     rule.OwnerAsset = this;
                     rule.RuleIndex = i;
+                    if (rule.BlendShapes != null) {
+                        foreach (var bs in rule.BlendShapes) {
+                            if (bs != null) bs.OwnerAsset = this;
+                        }
+                    }
                 }
             }
             if (Presets != null) {
@@ -364,6 +369,40 @@ namespace Warudo.Plugins.McpBridge {
 
 
 
+
+        /// <summary>
+        /// Danh sách SkinnedMeshRenderer trên avatar cho autocomplete.
+        /// </summary>
+        public string[] GetAvatarSkinnedMeshNames() {
+            var root = Character?.GameObject?.transform;
+            if (root == null) return Array.Empty<string>();
+            return root.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                .Where(smr => smr != null && !string.IsNullOrWhiteSpace(smr.name))
+                .Select(smr => smr.name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        /// <summary>
+        /// Danh sách BlendShape names trên avatar cho autocomplete.
+        /// </summary>
+        public string[] GetAvatarBlendShapeNames(string skinnedMeshName = null) {
+            var root = Character?.GameObject?.transform;
+            if (root == null) return Array.Empty<string>();
+            var smrs = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var smr in smrs) {
+                if (smr == null || smr.sharedMesh == null) continue;
+                if (!string.IsNullOrWhiteSpace(skinnedMeshName) && !string.Equals(smr.name, skinnedMeshName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var mesh = smr.sharedMesh;
+                for (int i = 0; i < mesh.blendShapeCount; i++) {
+                    names.Add(mesh.GetBlendShapeName(i));
+                }
+            }
+            return names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray();
+        }
 
         /// <summary>
         /// Danh sách toàn bộ GameObject non-bone (dưới dạng relative path) cho autocomplete Manual Paths.
@@ -1047,12 +1086,36 @@ namespace Warudo.Plugins.McpBridge {
 
         private void ApplyChildVisibilityRule(OutfitChildVisibilityRule rule) {
             var root = Character?.GameObject?.transform;
-            if (root == null || rule?.ChildNames == null) return;
-            var names = new HashSet<string>(rule.ChildNames.Where(name => !string.IsNullOrWhiteSpace(name)),
-                StringComparer.OrdinalIgnoreCase);
-            if (names.Count == 0) return;
-            foreach (var child in EnumerateDescendants(root)) {
-                if (names.Contains(child.name)) child.gameObject.SetActive(rule.Visible);
+            if (root == null || rule == null) return;
+
+            // 1. Toggle GameObject children theo tên
+            if (rule.ChildNames != null && rule.ChildNames.Length > 0) {
+                var names = new HashSet<string>(rule.ChildNames.Where(name => !string.IsNullOrWhiteSpace(name)),
+                    StringComparer.OrdinalIgnoreCase);
+                if (names.Count > 0) {
+                    foreach (var child in EnumerateDescendants(root)) {
+                        if (names.Contains(child.name)) child.gameObject.SetActive(rule.Visible);
+                    }
+                }
+            }
+
+            // 2. Thay đổi BlendShape tương ứng
+            if (rule.BlendShapes != null && rule.BlendShapes.Length > 0) {
+                var smrs = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                foreach (var bs in rule.BlendShapes) {
+                    if (bs == null || string.IsNullOrWhiteSpace(bs.BlendShapeName)) continue;
+                    float targetWeight = rule.Visible ? bs.VisibleValue : bs.HiddenValue;
+
+                    foreach (var smr in smrs) {
+                        if (smr == null || smr.sharedMesh == null) continue;
+                        if (!string.IsNullOrWhiteSpace(bs.SkinnedMeshName) && !string.Equals(smr.name, bs.SkinnedMeshName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        int bsIndex = smr.sharedMesh.GetBlendShapeIndex(bs.BlendShapeName);
+                        if (bsIndex >= 0) {
+                            smr.SetBlendShapeWeight(bsIndex, targetWeight);
+                        }
+                    }
+                }
             }
         }
 
