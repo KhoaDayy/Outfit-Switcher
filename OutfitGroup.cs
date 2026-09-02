@@ -74,37 +74,14 @@ namespace Warudo.Plugins.McpBridge {
         public OutfitSwitcherAsset OwnerAsset;
         public int GroupIndex = -1;
 
-        // ── Trigger — mặc item này (hiển thị ngay cạnh NAME/PATH trong UI) ──
-        // Dùng Path làm key (unique sau scan) thay vì DisplayName — tránh
-        // mặc nhầm item khi 2 path khác nhau có cùng leaf name.
         [Trigger]
-        [Label("WEAR / TOGGLE")]
+        [Label("👗 WEAR")]
         [Description("Mặc item này (Switch group: tắt toàn bộ item khác; Toggle group: bật/tắt độc lập)")]
         public void Wear() {
             OwnerAsset?.WearItemByPath(GroupIndex, Path);
         }
-
-        [Trigger]
-        [Label("PREVIEW INFO")]
-        [Description("Kiểm tra path, renderer và khả năng chạy sweep mà không đổi trạng thái avatar.")]
-        public void PreviewInfo() {
-            OwnerAsset?.PreviewItemByPath(GroupIndex, Path);
-        }
-
-        [Trigger]
-        [Label("ENABLE")]
-        [Description("Bật item một cách xác định; phù hợp cho Stream Deck và automation.")]
-        public void Enable() {
-            OwnerAsset?.SetItemActiveByPath(GroupIndex, Path, true);
-        }
-
-        [Trigger]
-        [Label("DISABLE")]
-        [Description("Tắt item một cách xác định; phù hợp để tháo phụ kiện.")]
-        public void Disable() {
-            OwnerAsset?.SetItemActiveByPath(GroupIndex, Path, false);
-        }
     }
+
 
     /// <summary>
     /// Quy tắc hiển thị child dùng chung giữa các outfit. Ví dụ một rule
