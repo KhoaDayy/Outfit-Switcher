@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using Warudo.Core;
 using Warudo.Core.Attributes;
@@ -203,9 +205,17 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("FOLDER PATH")]
-        [Description("Path tới folder chứa các outfit, vd 'Clothes/Outfits'")]
+        [Description("Chọn folder trực tiếp từ hierarchy của Character. Vẫn có thể gõ path nếu cần.")]
+        [AutoComplete(nameof(AutoCompleteFolderPath), forceSelection: false)]
         [HiddenIf(nameof(IsManualMode))]
         public string FolderPath = "";
+
+        protected UniTask<AutoCompleteList> AutoCompleteFolderPath() {
+            var entries = (OwnerAsset?.GetFolderPaths() ?? Array.Empty<string>())
+                .Select(path => new AutoCompleteEntry { label = path, value = path })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
+        }
 
         [DataInput]
         [Label("MANUAL PATHS")]
