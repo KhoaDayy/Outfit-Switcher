@@ -901,29 +901,29 @@ namespace Warudo.Plugins.McpBridge {
             var errors = new List<string>();
             foreach (var entry in preset.Entries ?? Array.Empty<OutfitPresetEntry>()) {
                 if (entry == null) continue;
-                string error;
+                string entryError;
                 bool success;
                 switch (entry.Action) {
                     case OutfitPresetAction.Disable:
-                        success = TrySetItemActive(entry.GroupName, entry.ItemNameOrPath, false, out error);
+                        success = TrySetItemActive(entry.GroupName, entry.ItemNameOrPath, false, out entryError);
                         break;
                     case OutfitPresetAction.Toggle:
                         var groupIndex = FindGroupIndex(entry.GroupName);
                         if (groupIndex < 0) {
                             success = false;
-                            error = $"Không tìm thấy group '{entry.GroupName}'.";
+                            entryError = $"Không tìm thấy group '{entry.GroupName}'.";
                         } else if (Groups[groupIndex].GroupType != OutfitGroupType.Toggle) {
                             success = false;
-                            error = $"Toggle chỉ dùng cho Toggle group '{entry.GroupName}'.";
+                            entryError = $"Toggle chỉ dùng cho Toggle group '{entry.GroupName}'.";
                         } else {
-                            success = TryWearItem(entry.GroupName, entry.ItemNameOrPath, out error);
+                            success = TryWearItem(entry.GroupName, entry.ItemNameOrPath, out entryError);
                         }
                         break;
                     default:
-                        success = TrySetItemActive(entry.GroupName, entry.ItemNameOrPath, true, out error);
+                        success = TrySetItemActive(entry.GroupName, entry.ItemNameOrPath, true, out entryError);
                         break;
                 }
-                if (!success) errors.Add(error);
+                if (!success) errors.Add(entryError);
             }
             if (errors.Count == 0) {
                 UpdateStatus($"Applied preset **{preset.PresetName}**");
