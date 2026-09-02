@@ -170,7 +170,7 @@ namespace Warudo.Plugins.McpBridge {
                 if (reader.TokenType == Newtonsoft.Json.JsonToken.Null) return null;
                 
                 try {
-                    var method = typeof(StructuredData).GetMethod("Create", Type.EmptyTypes);
+                    var method = typeof(StructuredData).GetMethod("Create", System.Type.EmptyTypes);
                     if (method != null) {
                         var generic = method.MakeGenericMethod(objectType);
                         var instance = generic.Invoke(null, null);
@@ -1781,3 +1781,4 @@ namespace Warudo.Plugins.McpBridge {
         }
     }
 }
+ 
