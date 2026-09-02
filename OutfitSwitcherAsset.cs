@@ -117,8 +117,6 @@ namespace Warudo.Plugins.McpBridge {
             Broadcast();
         }
 
-
-
         private class WarudoValueProvider : Newtonsoft.Json.Serialization.IValueProvider {
             private readonly System.Reflection.PropertyInfo _pi;
             private readonly System.Reflection.FieldInfo _fi;
@@ -501,6 +499,8 @@ namespace Warudo.Plugins.McpBridge {
 
             // Ghi nhận character đã scan — dùng để chặn restore nhầm avatar khác
             group.ScannedCharacterId = GetCharacterId();
+            
+            UpdateItemStates(group);
             group.SetDataInput(nameof(OutfitGroup.ScannedCharacterId), group.ScannedCharacterId, broadcast: true);
 
             SetDataInput(nameof(Groups), Groups, broadcast: true);
