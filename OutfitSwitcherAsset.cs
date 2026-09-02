@@ -62,6 +62,7 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         public string Status = "Thêm group rồi bấm **Scan Items** để bắt đầu.";
 
+        [Section("Setup", 0)]
         [Trigger]
         [Label("Refresh Setup")]
         [Description("Cập nhật lại toàn bộ nút bấm và cấu hình")]
@@ -102,6 +103,7 @@ namespace Warudo.Plugins.McpBridge {
             return UniTask.FromResult(AutoCompleteList.Single(files));
         }
 
+        [Section("Profiles", 10)]
         [Trigger]
         [Label("Save Outfit Profile")]
         [Description("Lưu cấu hình hiện tại thành file profile theo Profile Name ở trên.")]
@@ -137,6 +139,7 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
+        [Section("Profiles", 10)]
         [Trigger]
         [Label("Load Outfit Profile")]
         [Description("Nạp profile đã chọn ở Profile Name và áp dụng vào avatar.")]
@@ -188,6 +191,7 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
+        [Section("Profiles", 10)]
         [Trigger]
         [Label("Open Outfit Profiles Folder")]
         [Description("Mở thư mục chứa các file Profile trong File Explorer.")]
