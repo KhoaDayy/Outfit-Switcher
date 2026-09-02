@@ -83,7 +83,6 @@ namespace Warudo.Plugins.McpBridge {
         // OUTFIT PROFILES (SAVE / LOAD / SHARE)
         // ═══════════════════════════════════════════════════════
 
-        [Section("Profiles", 10)]
         [DataInput]
         [Label("Profile Name")]
         [Description("Tên profile (chọn từ dropdown hoặc nhập tên mới để lưu)")]
@@ -428,21 +427,21 @@ namespace Warudo.Plugins.McpBridge {
             if (TriggerPortCollection.ContainsPort(nameof(RefreshSetup))) {
                 var port = TriggerPortCollection.GetPort(nameof(RefreshSetup));
                 port.Properties.sectionTitle = "Setup";
-                port.Properties.order = 9f;
+                port.Properties.order = 10f;
             }
             if (TriggerPortCollection.ContainsPort(nameof(SaveProfile))) {
                 var port = TriggerPortCollection.GetPort(nameof(SaveProfile));
-                port.Properties.sectionTitle = "Profiles";
+                port.Properties.sectionTitle = "Setup";
                 port.Properties.order = 11f;
             }
             if (TriggerPortCollection.ContainsPort(nameof(LoadProfile))) {
                 var port = TriggerPortCollection.GetPort(nameof(LoadProfile));
-                port.Properties.sectionTitle = "Profiles";
+                port.Properties.sectionTitle = "Setup";
                 port.Properties.order = 12f;
             }
             if (TriggerPortCollection.ContainsPort(nameof(OpenProfilesFolder))) {
                 var port = TriggerPortCollection.GetPort(nameof(OpenProfilesFolder));
-                port.Properties.sectionTitle = "Profiles";
+                port.Properties.sectionTitle = "Setup";
                 port.Properties.order = 13f;
             }
 
