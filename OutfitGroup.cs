@@ -133,15 +133,59 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("Group Name")]
+        [AutoComplete(nameof(AutoCompleteGroupName), forceSelection: false)]
         public string GroupName = "Outfit";
+
+        protected UniTask<AutoCompleteList> AutoCompleteGroupName() {
+            var entries = (OwnerAsset?.GetGroupNames() ?? Array.Empty<string>())
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
+        }
 
         [DataInput]
         [Label("Item Name or Path")]
+        [AutoComplete(nameof(AutoCompleteItemNameOrPath), forceSelection: false)]
         public string ItemNameOrPath = "";
+
+        protected UniTask<AutoCompleteList> AutoCompleteItemNameOrPath() {
+            var items = OwnerAsset?.GetItems(GroupName);
+            if (items != null && items.Length > 0) {
+                var entries = items
+                    .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Path))
+                    .Select(item => new AutoCompleteEntry {
+                        label = string.IsNullOrWhiteSpace(item.DisplayName) ? item.Path : $"{item.DisplayName} ({item.Path})",
+                        value = string.IsNullOrWhiteSpace(item.DisplayName) ? item.Path : item.DisplayName
+                    })
+                    .ToList();
+                return UniTask.FromResult(AutoCompleteList.Single(entries));
+            }
+
+            // Fallback: Liệt kê tất cả items đã scan của mọi group
+            var allItems = (OwnerAsset?.Groups ?? Array.Empty<OutfitGroup>())
+                .Where(g => g?.Items != null)
+                .SelectMany(g => g.Items)
+                .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Path))
+                .Select(item => new AutoCompleteEntry {
+                    label = string.IsNullOrWhiteSpace(item.DisplayName) ? item.Path : $"{item.DisplayName} ({item.Path})",
+                    value = string.IsNullOrWhiteSpace(item.DisplayName) ? item.Path : item.DisplayName
+                })
+                .ToList();
+
+            if (allItems.Count == 0) {
+                allItems = (OwnerAsset?.GetAllGameObjectPaths() ?? Array.Empty<string>())
+                    .Select(p => new AutoCompleteEntry { label = p, value = p })
+                    .ToList();
+            }
+
+            return UniTask.FromResult(AutoCompleteList.Single(allItems));
+        }
 
         [DataInput]
         [Label("Action")]
         public OutfitPresetAction Action = OutfitPresetAction.Enable;
+
+        public OutfitSwitcherAsset OwnerAsset;
 
         public string GetHeader() {
             return $"{GroupName} / {(string.IsNullOrWhiteSpace(ItemNameOrPath) ? "(Item)" : ItemNameOrPath)} ({Action})";
@@ -179,7 +223,7 @@ namespace Warudo.Plugins.McpBridge {
     /// <summary>
     /// Một nhóm outfit: quét folder/manual paths → danh sách OutfitItem[].
     /// Bấm trigger ScanItems để quét. Mỗi item trong danh sách Items có nút
-    /// 👗 WEAR riêng; Next/Prev nhanh cho 3 group đầu nằm trên Asset.
+    /// WEAR riêng; Next/Prev nhanh cho 3 group đầu nằm trên Asset.
     /// </summary>
     public class OutfitGroup : StructuredData, ICollapsibleStructuredData {
 
@@ -209,8 +253,16 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         [Label("Manual Paths")]
         [Description("Danh sách path thủ công")]
+        [AutoComplete(nameof(AutoCompleteManualPaths), forceSelection: false)]
         [HiddenIf(nameof(IsAvatarFolderMode))]
         public string[] ManualPaths = Array.Empty<string>();
+
+        protected UniTask<AutoCompleteList> AutoCompleteManualPaths() {
+            var entries = (OwnerAsset?.GetAllGameObjectPaths() ?? Array.Empty<string>())
+                .Select(path => new AutoCompleteEntry { label = path, value = path })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
+        }
 
         [DataInput]
         [Label("Group Type")]
