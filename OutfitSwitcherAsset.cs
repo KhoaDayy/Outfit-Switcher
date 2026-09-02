@@ -32,6 +32,7 @@ namespace Warudo.Plugins.McpBridge {
     )]
     public class OutfitSwitcherAsset : Asset {
 
+        [Section("1. Setup", 0)]
         [DataInput]
         [Label("CHARACTER")]
         public CharacterAsset Character;
@@ -260,37 +261,31 @@ namespace Warudo.Plugins.McpBridge {
             }
             _dynamicTriggerKeys.Clear();
 
-            // 1. Tạo nút Scan và nút Wear từng item cho mỗi Group
+            float currentOrder = 100f;
+
+            // 1. Tạo các nút Wear cho từng item trong mỗi Group
             if (Groups != null) {
                 for (int g = 0; g < Groups.Length; g++) {
                     var group = Groups[g];
                     if (group == null) continue;
                     var groupName = string.IsNullOrWhiteSpace(group.GroupName) ? $"Group {g + 1}" : group.GroupName;
 
-                    // Nút Scan Group
-                    var scanKey = $"dynamic_scan_{g}";
-                    var capturedGroup = group;
-                    var scanPort = new TriggerPort(scanKey, () => ScanGroup(capturedGroup), new TriggerProperties {
-                        label = $"🔄 Scan {groupName}",
-                        description = $"Quét lại danh sách item cho group '{groupName}'",
-                        sectionTitle = $"👗 {groupName.ToUpper()}"
-                    });
-                    TriggerPortCollection.AddPort(scanPort);
-                    _dynamicTriggerKeys.Add(scanKey);
-
-                    // Nút Wear từng item
-                    if (group.Items != null) {
+                    if (group.Items != null && group.Items.Length > 0) {
                         for (int i = 0; i < group.Items.Length; i++) {
                             var item = group.Items[i];
                             if (item == null || string.IsNullOrWhiteSpace(item.Path)) continue;
+
                             var capturedG = g;
                             var capturedPath = item.Path;
                             var itemName = string.IsNullOrWhiteSpace(item.DisplayName) ? item.Path : item.DisplayName;
                             var itemKey = $"dynamic_wear_{g}_{i}_{item.Path.GetHashCode()}";
 
+                            var isFirstInGroup = (i == 0);
                             var port = new TriggerPort(itemKey, () => WearItemByPath(capturedG, capturedPath), new TriggerProperties {
                                 label = $"👗 {itemName}",
-                                description = item.Path
+                                description = item.Path,
+                                sectionTitle = isFirstInGroup ? $"👗 {groupName.ToUpper()}" : null,
+                                order = currentOrder++
                             });
                             TriggerPortCollection.AddPort(port);
                             _dynamicTriggerKeys.Add(itemKey);
@@ -301,6 +296,7 @@ namespace Warudo.Plugins.McpBridge {
 
             // 2. Tạo nút Toggle cho Child Visibility Rules
             if (ChildVisibilityRules != null && ChildVisibilityRules.Length > 0) {
+                currentOrder = 200f;
                 for (int r = 0; r < ChildVisibilityRules.Length; r++) {
                     var rule = ChildVisibilityRules[r];
                     if (rule == null) continue;
@@ -310,8 +306,9 @@ namespace Warudo.Plugins.McpBridge {
 
                     var port = new TriggerPort(ruleKey, () => ToggleChildVisibilityRule(capturedR), new TriggerProperties {
                         label = $"👁️ Toggle {ruleName}",
-                        description = $"Bật/tắt hiển thị cho {ruleName}",
-                        sectionTitle = r == 0 ? "👁️ CHILD VISIBILITY" : null
+                        description = $"Bật/tắt {ruleName}",
+                        sectionTitle = (r == 0) ? "👁️ CHILD VISIBILITY" : null,
+                        order = currentOrder++
                     });
                     TriggerPortCollection.AddPort(port);
                     _dynamicTriggerKeys.Add(ruleKey);
@@ -320,6 +317,7 @@ namespace Warudo.Plugins.McpBridge {
 
             // 3. Tạo nút Apply cho Presets
             if (Presets != null && Presets.Length > 0) {
+                currentOrder = 300f;
                 for (int p = 0; p < Presets.Length; p++) {
                     var preset = Presets[p];
                     if (preset == null) continue;
@@ -330,7 +328,8 @@ namespace Warudo.Plugins.McpBridge {
                     var port = new TriggerPort(presetKey, () => ApplyPreset(capturedP), new TriggerProperties {
                         label = $"⚡ {presetName}",
                         description = $"Áp dụng preset '{presetName}'",
-                        sectionTitle = p == 0 ? "⚡ PRESETS" : null
+                        sectionTitle = (p == 0) ? "⚡ PRESETS" : null,
+                        order = currentOrder++
                     });
                     TriggerPortCollection.AddPort(port);
                     _dynamicTriggerKeys.Add(presetKey);
