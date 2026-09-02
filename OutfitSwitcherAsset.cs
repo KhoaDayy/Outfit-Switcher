@@ -96,11 +96,13 @@ namespace Warudo.Plugins.McpBridge {
                 foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
                     if (group == null) continue;
                     
-                    // Quét group, nếu không tìm thấy folder sẽ UpdateStatus lỗi
-                    var oldStatus = Status;
-                    ScanGroup(group);
-                    if (Status != oldStatus && Status.Contains("❌")) {
-                        hasError = true;
+                    // Chỉ tự động quét nếu group chưa có item nào (tránh ghi đè khi người dùng đã tự xoá/sửa item)
+                    if (group.Items == null || group.Items.Length == 0) {
+                        var oldStatus = Status;
+                        ScanGroup(group);
+                        if (Status != oldStatus && Status.Contains("❌")) {
+                            hasError = true;
+                        }
                     }
                     RestoreLastActiveItem(group);
                 }
