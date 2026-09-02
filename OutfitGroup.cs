@@ -1,12 +1,23 @@
 using System;
 using System.Linq;
 using Cysharp.Threading.Tasks;
+using Newtonsoft.Json;
 using UnityEngine;
 using Warudo.Core;
 using Warudo.Core.Attributes;
 using Warudo.Core.Data;
 
 namespace Warudo.Plugins.McpBridge {
+
+    [Serializable]
+    public class OutfitSwitcherBackupData {
+        public string Version = "1.0";
+        public string AvatarName = "";
+        public string ExportDate = "";
+        public OutfitGroup[] Groups = Array.Empty<OutfitGroup>();
+        public OutfitChildVisibilityRule[] ChildVisibilityRules = Array.Empty<OutfitChildVisibilityRule>();
+        public OutfitPreset[] Presets = Array.Empty<OutfitPreset>();
+    }
 
     // ── Enums ──
 
@@ -71,7 +82,9 @@ namespace Warudo.Plugins.McpBridge {
 
         // Runtime links — được set lại bởi OutfitSwitcherAsset.LinkGroups()
         // (không phải DataInput — tránh serialize tham chiếu asset trong structured data)
+        [JsonIgnore]
         public OutfitSwitcherAsset OwnerAsset;
+        [JsonIgnore]
         public int GroupIndex = -1;
 
         public string GetHeader() {
@@ -127,6 +140,7 @@ namespace Warudo.Plugins.McpBridge {
         [FloatSlider(0f, 100f, 1f)]
         public float HiddenValue = 0f;
 
+        [JsonIgnore]
         public OutfitSwitcherAsset OwnerAsset;
 
         public string GetHeader() {
@@ -225,7 +239,9 @@ namespace Warudo.Plugins.McpBridge {
         [Description("Trạng thái hiển thị")]
         public bool Visible = true;
 
+        [JsonIgnore]
         public OutfitSwitcherAsset OwnerAsset;
+        [JsonIgnore]
         public int RuleIndex = -1;
 
         public string GetHeader() {
@@ -307,6 +323,7 @@ namespace Warudo.Plugins.McpBridge {
         [Label("Action")]
         public OutfitPresetAction Action = OutfitPresetAction.Enable;
 
+        [JsonIgnore]
         public OutfitSwitcherAsset OwnerAsset;
 
         public string GetHeader() {
@@ -324,7 +341,9 @@ namespace Warudo.Plugins.McpBridge {
         [Label("Entries")]
         public OutfitPresetEntry[] Entries = Array.Empty<OutfitPresetEntry>();
 
+        [JsonIgnore]
         public OutfitSwitcherAsset OwnerAsset;
+        [JsonIgnore]
         public int PresetIndex = -1;
 
         public string GetHeader() {
@@ -460,7 +479,9 @@ namespace Warudo.Plugins.McpBridge {
         public OutfitItem[] Items = Array.Empty<OutfitItem>();
 
         // Runtime links — được set lại bởi OutfitSwitcherAsset.LinkGroups()
+        [JsonIgnore]
         public OutfitSwitcherAsset OwnerAsset;
+        [JsonIgnore]
         public int GroupIndex = -1;
 
         public string GetHeader() {

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Cysharp.Threading.Tasks;
+using Newtonsoft.Json;
 using UnityEngine;
 using Warudo.Core;
 using Warudo.Core.Attributes;
@@ -75,6 +77,127 @@ namespace Warudo.Plugins.McpBridge {
             RebuildDynamicTriggers();
             UpdateStatus("Đã cập nhật toàn bộ cấu hình.");
             Broadcast();
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // BACKUP & SHARE
+        // ═══════════════════════════════════════════════════════
+
+        [Section("2. Backup & Share", 10)]
+        [DataInput]
+        [Label("Config JSON")]
+        [Description("Chuỗi JSON cấu hình để copy / share / backup")]
+        public string ConfigJson = "";
+
+        [Trigger]
+        [Label("Export to JSON")]
+        [Description("Xuất toàn bộ cấu hình ra chuỗi JSON và copy vào clipboard")]
+        public void ExportConfig() {
+            try {
+                var data = new OutfitSwitcherBackupData {
+                    Version = "1.0",
+                    AvatarName = Character?.Name ?? "Unknown",
+                    ExportDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Groups = Groups ?? Array.Empty<OutfitGroup>(),
+                    ChildVisibilityRules = ChildVisibilityRules ?? Array.Empty<OutfitChildVisibilityRule>(),
+                    Presets = Presets ?? Array.Empty<OutfitPreset>()
+                };
+                var settings = new JsonSerializerSettings {
+                    Formatting = Formatting.Indented,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    NullValueHandling = NullValueHandling.Ignore
+                };
+                var json = JsonConvert.SerializeObject(data, settings);
+                SetDataInput(nameof(ConfigJson), json, broadcast: true);
+                try {
+                    GUIUtility.systemCopyBuffer = json;
+                    UpdateStatus("Đã xuất cấu hình ra ô JSON và tự động copy vào Clipboard!");
+                } catch {
+                    UpdateStatus("Đã xuất cấu hình ra ô JSON bên dưới.");
+                }
+            } catch (Exception ex) {
+                ReportError("Export thất bại: " + ex.Message);
+            }
+        }
+
+        [Trigger]
+        [Label("Import from JSON")]
+        [Description("Nhập toàn bộ cấu hình từ chuỗi JSON")]
+        public void ImportConfig() {
+            if (string.IsNullOrWhiteSpace(ConfigJson)) {
+                ReportError("Vui lòng dán chuỗi JSON vào ô 'Config JSON' trước.");
+                return;
+            }
+            try {
+                var settings = new JsonSerializerSettings {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                };
+                var data = JsonConvert.DeserializeObject<OutfitSwitcherBackupData>(ConfigJson, settings);
+                if (data == null) {
+                    ReportError("Dữ liệu JSON không hợp lệ.");
+                    return;
+                }
+                if (data.Groups != null) {
+                    SetDataInput(nameof(Groups), data.Groups, broadcast: true);
+                }
+                if (data.ChildVisibilityRules != null) {
+                    SetDataInput(nameof(ChildVisibilityRules), data.ChildVisibilityRules, broadcast: true);
+                }
+                if (data.Presets != null) {
+                    SetDataInput(nameof(Presets), data.Presets, broadcast: true);
+                }
+                LinkRuntimeData();
+                if (Character?.GameObject != null) {
+                    foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
+                        if (group == null) continue;
+                        RestoreLastActiveItem(group);
+                    }
+                    ApplyChildVisibilityRules();
+                }
+                RebuildDynamicTriggers();
+                UpdateStatus($"Đã nhập thành công cấu hình! (Avatar: {data.AvatarName}, ngày: {data.ExportDate})");
+                Broadcast();
+            } catch (Exception ex) {
+                ReportError("Import thất bại: " + ex.Message);
+            }
+        }
+
+        [Trigger]
+        [Label("Export to File")]
+        [Description("Lưu file backup vào thư mục StreamingAssets")]
+        public void ExportToFile() {
+            try {
+                ExportConfig();
+                if (string.IsNullOrWhiteSpace(ConfigJson)) return;
+                var charName = string.IsNullOrWhiteSpace(Character?.Name) ? "Avatar" : Character.Name.Replace("/", "_").Replace("\\", "_");
+                var fileName = $"OutfitSwitcher_{charName}.json";
+                var fullPath = Path.Combine(Application.streamingAssetsPath, fileName);
+                File.WriteAllText(fullPath, ConfigJson, System.Text.Encoding.UTF8);
+                UpdateStatus($"Đã lưu file backup: **{fileName}** trong StreamingAssets!");
+            } catch (Exception ex) {
+                ReportError("Lưu file thất bại: " + ex.Message);
+            }
+        }
+
+        [Trigger]
+        [Label("Import from File")]
+        [Description("Đọc file backup từ thư mục StreamingAssets")]
+        public void ImportFromFile() {
+            try {
+                var charName = string.IsNullOrWhiteSpace(Character?.Name) ? "Avatar" : Character.Name.Replace("/", "_").Replace("\\", "_");
+                var fileName = $"OutfitSwitcher_{charName}.json";
+                var fullPath = Path.Combine(Application.streamingAssetsPath, fileName);
+                if (!File.Exists(fullPath)) {
+                    ReportError($"Không tìm thấy file '{fileName}' trong StreamingAssets.");
+                    return;
+                }
+                var json = File.ReadAllText(fullPath, System.Text.Encoding.UTF8);
+                SetDataInput(nameof(ConfigJson), json, broadcast: true);
+                ImportConfig();
+                UpdateStatus($"Đã nạp file backup: **{fileName}** thành công!");
+            } catch (Exception ex) {
+                ReportError("Đọc file thất bại: " + ex.Message);
+            }
         }
 
         // ═══════════════════════════════════════════════════════
