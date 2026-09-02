@@ -51,12 +51,12 @@ namespace Warudo.Plugins.McpBridge.Nodes {
 
         [DataInput]
         [Label("SWITCHER")]
-        [Description("Outfit Switcher asset để điều khiển")]
+        [Description("Asset điều khiển")]
         public OutfitSwitcherAsset Switcher;
 
         [DataInput]
         [Label("ACTION")]
-        [Description("Next / Previous / Random chỉ dành cho group Switch. Dùng Enable/Disable/Toggle cho phụ kiện.")]
+        [Description("Hành động chuyển đổi")]
         public OutfitSwitchAction Action = OutfitSwitchAction.SwitchToItem;
 
         [DataInput]
@@ -67,7 +67,7 @@ namespace Warudo.Plugins.McpBridge.Nodes {
 
         [DataInput]
         [Label("ITEM")]
-        [Description("Danh sách hiển thị tên và path; giá trị lưu là path ổn định.")]
+        [Description("Tên hoặc path của item")]
         [AutoComplete(nameof(AutoCompleteItem), forceSelection: true)]
         [HiddenIf(nameof(ShouldHideItem))]
         public string ItemName = "";

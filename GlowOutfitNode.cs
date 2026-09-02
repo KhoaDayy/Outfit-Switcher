@@ -64,22 +64,22 @@ namespace Warudo.Plugins.McpBridge.Nodes {
 
         [DataInput]
         [Label("GAMEOBJECT PATHS")]
-        [Description("Path tới outfit/thân cần glow (vd Assets/Outfits/SuriMukeki). KHÔNG trỏ vào mặt/tóc che mặt để giữ biểu cảm.")]
+        [Description("Path tới outfit cần glow")]
         public string[] GameObjectPaths = new[] { "Assets/Outfits/SuriMukeki" };
 
         [DataInput]
         [Label("GLOW COLOR")]
-        [Description("Màu glow ở pha đầu và pha tan. Ở đỉnh lóa overlay chuyển sang TRẮNG.")]
+        [Description("Màu sắc glow")]
         public Color GlowColor = new Color(1f, 0.4f, 0.8f, 1f);
 
         [DataInput]
         [Label("INTENSITY")]
-        [Description("Độ chói tại đỉnh. Nên 3~4 để trắng xóa che khuất cú swap.")]
+        [Description("Độ sáng đỉnh (khuyên dùng 3~4)")]
         public float Intensity = 3f;
 
         [DataInput]
         [Label("EXTRUSION (M)")]
-        [Description("Độ phồng overlay theo pháp tuyến đỉnh (mặc định 0.005 = 5mm).")]
+        [Description("Độ dày lớp overlay")]
         [FloatSlider(0f, 0.03f, 0.001f)]
         public float Extrusion = 0.005f;
 
@@ -90,28 +90,28 @@ namespace Warudo.Plugins.McpBridge.Nodes {
 
         [DataInput]
         [Label("PEAK (0-1)")]
-        [Description("Thời điểm lóa cực đại tính theo tỉ lệ Duration (0.42 ≈ 0.25s với 600ms). Cú cắt đổi đồ xảy ra đúng lúc này.")]
+        [Description("Thời điểm lóa đỉnh (0 - 1)")]
         [FloatSlider(0.05f, 0.95f, 0.01f)]
         public float PeakPercent = 0.42f;
 
         [DataInput]
         [Label("SWAP GAMEOBJECT PATHS (ĐỒ MỚI)")]
-        [Description("Path tới outfit MỚI sẽ hiện sau peak. Nếu có, tại peak overlay đồ cũ bị hủy và overlay đồ mới được tạo từ các path này — đồ mới lộ ra với glow hạ dần (đúng timeline swap). Để trống = overlay đồ cũ fade nốt (không glow đồ mới).")]
+        [Description("Path tới outfit mới sau swap")]
         public string[] SwapGameObjectPaths;
 
         [DataInput]
         [Label("IGNORE INACTIVE CHILDREN")]
-        [Description("Bỏ qua renderer đang inactive, hữu ích để tai/đuôi đã tháo không lóe sáng khi đổi outfit.")]
+        [Description("Bỏ qua renderer đang tắt")]
         public bool IgnoreInactiveChildren = false;
 
         [DataInput]
         [Label("EXCLUDED PATHS")]
-        [Description("Path hoặc tên child không được glow, vd Ears, Tail.")]
+        [Description("Path loại khỏi glow")]
         public string[] ExcludedPaths = Array.Empty<string>();
 
         [DataInput]
         [Label("DEBUG LOGS")]
-        [Description("Bật/tắt Debug.Log chi tiết. Tắt khi stream để tránh spam console.")]
+        [Description("Bật log chi tiết")]
         public bool DebugLogs = false;
 
         [FlowInput]

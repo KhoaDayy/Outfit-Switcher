@@ -37,20 +37,17 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("GROUPS")]
-        [Description("Thêm bao nhiêu group tùy ý (vd Outfit, Hair, Accessories). " +
-                     "Bấm + để thêm group, cấu hình folder path rồi bấm Scan. " +
-                     "Mỗi item sau scan có nút 👗 WEAR riêng. " +
-                     "Lưu ý: Không đưa cùng 1 GameObject vào nhiều group khác nhau để tránh xung đột trạng thái.")]
+        [Description("Danh sách nhóm trang phục/phụ kiện")]
         public OutfitGroup[] Groups = Array.Empty<OutfitGroup>();
 
         [DataInput]
         [Label("CHILD VISIBILITY RULES")]
-        [Description("Công tắc dùng chung cho child nằm trong outfit, vd Ears/Tail. Rule được tự áp dụng lại sau mỗi lần đổi outfit.")]
+        [Description("Quy tắc ẩn/hiện part con (vd Tai, Đuôi)")]
         public OutfitChildVisibilityRule[] ChildVisibilityRules = Array.Empty<OutfitChildVisibilityRule>();
 
         [DataInput]
         [Label("PRESETS")]
-        [Description("Mỗi preset có thể mặc outfit và bật/tắt nhiều phụ kiện bằng một nút.")]
+        [Description("Combo trang phục & phụ kiện")]
         public OutfitPreset[] Presets = Array.Empty<OutfitPreset>();
 
         [DataInput]

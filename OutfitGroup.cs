@@ -62,7 +62,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("PATH")]
-        [Description("Path GameObject trong avatar, vd 'Clothes/Top A'")]
+        [Description("Path GameObject trong avatar")]
         public string Path = "";
 
         [DataInput]
@@ -80,7 +80,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [Trigger]
         [Label("👗 WEAR")]
-        [Description("Mặc item này (Switch group: tắt toàn bộ item khác; Toggle group: bật/tắt độc lập)")]
+        [Description("Mặc / bật tắt item")]
         public void Wear() {
             OwnerAsset?.WearItemByPath(GroupIndex, Path);
         }
@@ -99,7 +99,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("CHILD NAMES")]
-        [Description("Tên GameObject con cần điều khiển trong outfit đang active, vd Ears, Tail. So khớp tên chính xác, không phân biệt hoa thường.")]
+        [Description("Tên GameObject con (vd Ears, Tail)")]
         [AutoComplete(nameof(AutoCompleteChildNames), forceSelection: false)]
         public string[] ChildNames = Array.Empty<string>();
 
@@ -112,7 +112,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("VISIBLE")]
-        [Description("Trạng thái được giữ lại và tự áp dụng sau mỗi lần đổi outfit.")]
+        [Description("Trạng thái hiển thị")]
         public bool Visible = true;
 
         public OutfitSwitcherAsset OwnerAsset;
@@ -185,7 +185,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("GROUP NAME")]
-        [Description("Tên group, vd 'Outfit', 'Hair', 'Accessories'")]
+        [Description("Tên nhóm (vd Outfit, Hair)")]
         public string GroupName = "Outfit";
 
         [DataInput]
@@ -194,7 +194,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("FOLDER PATH")]
-        [Description("Chọn folder trực tiếp từ hierarchy của Character. Vẫn có thể gõ path nếu cần.")]
+        [Description("Folder chứa outfit trong hierarchy")]
         [AutoComplete(nameof(AutoCompleteFolderPath), forceSelection: false)]
         [HiddenIf(nameof(IsManualMode))]
         public string FolderPath = "";
@@ -208,13 +208,13 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("MANUAL PATHS")]
-        [Description("Các path riêng lẻ, vd 'Clothes/Top A', 'Clothes/Bottom A'")]
+        [Description("Danh sách path thủ công")]
         [HiddenIf(nameof(IsAvatarFolderMode))]
         public string[] ManualPaths = Array.Empty<string>();
 
         [DataInput]
         [Label("GROUP TYPE")]
-        [Description("Switch: Chế độ đổi đồ (chỉ 1 outfit active trong group, chuyển sang bộ mới sẽ tự tắt toàn bộ các bộ cũ). Toggle: Bật/tắt độc lập.")]
+        [Description("Switch: 1 active | Toggle: Bật/tắt tự do")]
         public OutfitGroupType GroupType = OutfitGroupType.Single;
 
         [DataInput]
@@ -228,7 +228,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("INTENSITY")]
-        [Description("Độ chói tại đỉnh glow, nên 3~4")]
+        [Description("Độ sáng đỉnh glow")]
         [FloatSlider(0f, 10f, 0.1f)]
         [HiddenIf(nameof(IsInstantTransition))]
         public float Intensity = 3f;
@@ -241,20 +241,20 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("PEAK (0-1)")]
-        [Description("Thời điểm lóa cực đại, 0.42 ≈ 0.25s với 600ms")]
+        [Description("Thời điểm lóa đỉnh (0 - 1)")]
         [FloatSlider(0.05f, 0.95f, 0.01f)]
         [HiddenIf(nameof(IsInstantTransition))]
         public float PeakPercent = 0.42f;
 
         [DataInput]
         [Label("IGNORE INACTIVE CHILDREN")]
-        [Description("Không glow các child đang tắt, ví dụ tai/đuôi đã tháo. Nên bật cho outfit có phụ kiện con.")]
+        [Description("Không glow phần tử đang tắt")]
         [HiddenIf(nameof(IsInstantTransition))]
         public bool IgnoreInactiveChildren = true;
 
         [DataInput]
         [Label("GLOW EXCLUDED PATHS")]
-        [Description("Các path cần loại khỏi glow. Có thể dùng path đầy đủ hoặc path con bên trong outfit, vd Ears, Tail.")]
+        [Description("Path loại khỏi glow")]
         [HiddenIf(nameof(IsInstantTransition))]
         public string[] GlowExcludedPaths = Array.Empty<string>();
 
@@ -282,7 +282,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [DataInput]
         [Label("ITEMS")]
-        [Description("Danh sách item đã scan. Bấm 👗 WEAR trên từng item để đổi đồ.")]
+        [Description("Danh sách item đã scan")]
         public OutfitItem[] Items = Array.Empty<OutfitItem>();
 
         // Runtime links — được set lại bởi OutfitSwitcherAsset.LinkGroups()
@@ -297,7 +297,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [Trigger]
         [Label("SCAN ITEMS")]
-        [Description("Quét danh sách outfit theo folder/manual paths")]
+        [Description("Quét danh sách item")]
         public void ScanItems() {
             OwnerAsset?.ScanGroup(this);
         }
