@@ -119,18 +119,6 @@ namespace Warudo.Plugins.McpBridge {
         public void Toggle() {
             OwnerAsset?.ToggleChildVisibilityRule(RuleIndex);
         }
-
-        [Trigger]
-        [Label("SHOW")]
-        public void Show() {
-            OwnerAsset?.SetChildVisibilityRule(RuleIndex, true);
-        }
-
-        [Trigger]
-        [Label("HIDE")]
-        public void Hide() {
-            OwnerAsset?.SetChildVisibilityRule(RuleIndex, false);
-        }
     }
 
     public class OutfitPresetEntry : StructuredData {
