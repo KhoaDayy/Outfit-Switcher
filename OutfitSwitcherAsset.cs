@@ -79,11 +79,6 @@ namespace Warudo.Plugins.McpBridge {
             Broadcast();
         }
 
-        // ═══════════════════════════════════════════════════════
-        // OUTFIT PROFILES (SAVE / LOAD / SHARE)
-        // ═══════════════════════════════════════════════════════
-
-        [Section("Profiles", 10)]
         [DataInput]
         [Label("Profile Name")]
         [Description("Tên profile (chọn từ dropdown hoặc nhập tên mới để lưu)")]
@@ -102,7 +97,6 @@ namespace Warudo.Plugins.McpBridge {
             return UniTask.FromResult(AutoCompleteList.Single(files));
         }
 
-        [Section("Profiles", 10)]
         [Trigger]
         [Label("Save Outfit Profile")]
         [Description("Lưu cấu hình hiện tại thành file profile theo Profile Name ở trên.")]
@@ -138,7 +132,6 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
-        [Section("Profiles", 10)]
         [Trigger]
         [Label("Load Outfit Profile")]
         [Description("Nạp profile đã chọn ở Profile Name và áp dụng vào avatar.")]
@@ -190,7 +183,6 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
-        [Section("Profiles", 10)]
         [Trigger]
         [Label("Open Outfit Profiles Folder")]
         [Description("Mở thư mục chứa các file Profile trong File Explorer.")]
