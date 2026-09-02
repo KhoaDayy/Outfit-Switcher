@@ -96,7 +96,15 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         [Label("CHILD NAMES")]
         [Description("Tên GameObject con cần điều khiển trong outfit đang active, vd Ears, Tail. So khớp tên chính xác, không phân biệt hoa thường.")]
+        [AutoComplete(nameof(AutoCompleteChildNames), forceSelection: false)]
         public string[] ChildNames = Array.Empty<string>();
+
+        protected UniTask<AutoCompleteList> AutoCompleteChildNames() {
+            var entries = (OwnerAsset?.GetChildGameObjectNames() ?? Array.Empty<string>())
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
+        }
 
         [DataInput]
         [Label("VISIBLE")]
@@ -294,3 +302,4 @@ namespace Warudo.Plugins.McpBridge {
         protected bool IsToggleGroup() => GroupType == OutfitGroupType.Toggle;
     }
 }
+ 

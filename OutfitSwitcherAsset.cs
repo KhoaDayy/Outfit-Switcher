@@ -265,6 +265,47 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         /// <summary>
+        /// Danh sách tên GameObject con (bên dưới các outfit items hoặc avatar) cho autocomplete CHILD NAMES.
+        /// </summary>
+        public string[] GetChildGameObjectNames() {
+            var root = Character?.GameObject?.transform;
+            if (root == null) return Array.Empty<string>();
+
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // 1. Lấy từ các child bên dưới các item đã scan
+            if (Groups != null) {
+                foreach (var group in Groups) {
+                    if (group?.Items == null) continue;
+                    foreach (var item in group.Items) {
+                        if (item == null || string.IsNullOrWhiteSpace(item.Path)) continue;
+                        var itemTransform = FindByPath(root, item.Path);
+                        if (itemTransform == null) continue;
+                        foreach (Transform child in itemTransform) {
+                            if (!IsBoneBranch(child)) {
+                                names.Add(child.name);
+                                foreach (var sub in EnumerateNonBoneDescendants(child, 0, 3)) {
+                                    names.Add(sub.name);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Nếu chưa scan hoặc chưa có items, lấy từ các GameObject non-bone trên character
+            if (names.Count == 0) {
+                foreach (var t in EnumerateNonBoneDescendants(root, 0, 4)) {
+                    if (t != root && !string.IsNullOrWhiteSpace(t.name)) {
+                        names.Add(t.name);
+                    }
+                }
+            }
+
+            return names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+
+        /// <summary>
         /// Tên GameObject thường là gốc skeleton — bỏ qua toàn bộ nhánh con.
         /// Chỉ chứa tên chuyên biệt cho bone root, KHÔNG chứa tên chung như
         /// "Root" (vì nhiều avatar dùng Root làm folder cha chứa outfit).
