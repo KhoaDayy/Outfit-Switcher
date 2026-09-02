@@ -62,7 +62,6 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         public string Status = "Thêm group rồi bấm **Scan Items** để bắt đầu.";
 
-        [Section("Setup", 0)]
         [Trigger]
         [Label("Refresh Setup")]
         [Description("Cập nhật lại toàn bộ nút bấm và cấu hình")]
@@ -103,7 +102,6 @@ namespace Warudo.Plugins.McpBridge {
             return UniTask.FromResult(AutoCompleteList.Single(files));
         }
 
-        [Section("Profiles", 10)]
         [Trigger]
         [Label("Save Outfit Profile")]
         [Description("Lưu cấu hình hiện tại thành file profile theo Profile Name ở trên.")]
@@ -139,7 +137,6 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
-        [Section("Profiles", 10)]
         [Trigger]
         [Label("Load Outfit Profile")]
         [Description("Nạp profile đã chọn ở Profile Name và áp dụng vào avatar.")]
@@ -191,7 +188,6 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
-        [Section("Profiles", 10)]
         [Trigger]
         [Label("Open Outfit Profiles Folder")]
         [Description("Mở thư mục chứa các file Profile trong File Explorer.")]
@@ -430,16 +426,24 @@ namespace Warudo.Plugins.McpBridge {
 
             // Sắp xếp lại thứ tự các nút tĩnh cho chuẩn UI
             if (TriggerPortCollection.ContainsPort(nameof(RefreshSetup))) {
-                TriggerPortCollection.GetPort(nameof(RefreshSetup)).Properties.order = 10f;
+                var port = TriggerPortCollection.GetPort(nameof(RefreshSetup));
+                port.Properties.sectionTitle = "Setup";
+                port.Properties.order = 90f;
             }
             if (TriggerPortCollection.ContainsPort(nameof(SaveProfile))) {
-                TriggerPortCollection.GetPort(nameof(SaveProfile)).Properties.order = 11f;
+                var port = TriggerPortCollection.GetPort(nameof(SaveProfile));
+                port.Properties.sectionTitle = "Profiles";
+                port.Properties.order = 91f;
             }
             if (TriggerPortCollection.ContainsPort(nameof(LoadProfile))) {
-                TriggerPortCollection.GetPort(nameof(LoadProfile)).Properties.order = 12f;
+                var port = TriggerPortCollection.GetPort(nameof(LoadProfile));
+                port.Properties.sectionTitle = "Profiles";
+                port.Properties.order = 92f;
             }
             if (TriggerPortCollection.ContainsPort(nameof(OpenProfilesFolder))) {
-                TriggerPortCollection.GetPort(nameof(OpenProfilesFolder)).Properties.order = 13f;
+                var port = TriggerPortCollection.GetPort(nameof(OpenProfilesFolder));
+                port.Properties.sectionTitle = "Profiles";
+                port.Properties.order = 93f;
             }
 
             float currentOrder = 100f;
