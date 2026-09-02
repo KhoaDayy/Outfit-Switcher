@@ -19,6 +19,44 @@ namespace Warudo.Plugins.McpBridge {
         public OutfitPreset[] Presets = Array.Empty<OutfitPreset>();
     }
 
+    public class SaveOutfitProfileData : StructuredData {
+        [DataInput]
+        [Label("Profile Name")]
+        [AutoComplete(nameof(AutoCompleteProfileNames), forceSelection: false)]
+        public string ProfileName = "Default";
+
+        protected UniTask<AutoCompleteList> AutoCompleteProfileNames() {
+            var folder = System.IO.Path.Combine(Application.streamingAssetsPath, "OutfitProfiles");
+            if (!System.IO.Directory.Exists(folder)) return UniTask.FromResult(AutoCompleteList.Single(new System.Collections.Generic.List<AutoCompleteEntry>()));
+            var files = System.IO.Directory.GetFiles(folder, "*.json")
+                .Select(f => System.IO.Path.GetFileNameWithoutExtension(f))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(files));
+        }
+    }
+
+    public class LoadOutfitProfileData : StructuredData {
+        [DataInput]
+        [Label("Profile Name")]
+        [AutoComplete(nameof(AutoCompleteProfileNames), forceSelection: false)]
+        public string ProfileName = "Default";
+
+        protected UniTask<AutoCompleteList> AutoCompleteProfileNames() {
+            var folder = System.IO.Path.Combine(Application.streamingAssetsPath, "OutfitProfiles");
+            if (!System.IO.Directory.Exists(folder)) return UniTask.FromResult(AutoCompleteList.Single(new System.Collections.Generic.List<AutoCompleteEntry>()));
+            var files = System.IO.Directory.GetFiles(folder, "*.json")
+                .Select(f => System.IO.Path.GetFileNameWithoutExtension(f))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(files));
+        }
+    }
+
     // ── Enums ──
 
     public enum OutfitScanMode {
