@@ -54,8 +54,7 @@ namespace Warudo.Plugins.McpBridge {
         public OutfitPreset[] Presets = Array.Empty<OutfitPreset>();
 
         [DataInput]
-        [Label("DEBUG LOGS")]
-        [Description("Bật debug log chi tiết cho scan và switch")]
+        [Hidden]
         public bool DebugLogs = false;
 
         [Markdown(Primary = true)]
@@ -312,8 +311,6 @@ namespace Warudo.Plugins.McpBridge {
             return false;
         }
 
-        [Trigger]
-        [Label("VALIDATE CONFIGURATION")]
         public void ValidateConfiguration() {
             var errors = new List<string>();
             var warnings = new List<string>();
