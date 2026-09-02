@@ -32,6 +32,17 @@ namespace Warudo.Plugins.McpBridge {
         Glow
     }
 
+    public enum OutfitPresetAction {
+        [Label("Wear / Enable")]
+        Enable,
+
+        [Label("Disable")]
+        Disable,
+
+        [Label("Toggle (Toggle group only)")]
+        Toggle
+    }
+
     // ═══════════════════════════════════════════════════════
     // OUTFIT ITEM — một bộ đồ/accessory trong group
     // ═══════════════════════════════════════════════════════
@@ -65,10 +76,108 @@ namespace Warudo.Plugins.McpBridge {
         // Dùng Path làm key (unique sau scan) thay vì DisplayName — tránh
         // mặc nhầm item khi 2 path khác nhau có cùng leaf name.
         [Trigger]
-        [Label("👗 WEAR / TOGGLE")]
+        [Label("WEAR / TOGGLE")]
         [Description("Mặc item này (Switch group: tắt toàn bộ item khác; Toggle group: bật/tắt độc lập)")]
         public void Wear() {
             OwnerAsset?.WearItemByPath(GroupIndex, Path);
+        }
+
+        [Trigger]
+        [Label("PREVIEW INFO")]
+        [Description("Kiểm tra path, renderer và khả năng chạy sweep mà không đổi trạng thái avatar.")]
+        public void PreviewInfo() {
+            OwnerAsset?.PreviewItemByPath(GroupIndex, Path);
+        }
+
+        [Trigger]
+        [Label("ENABLE")]
+        [Description("Bật item một cách xác định; phù hợp cho Stream Deck và automation.")]
+        public void Enable() {
+            OwnerAsset?.SetItemActiveByPath(GroupIndex, Path, true);
+        }
+
+        [Trigger]
+        [Label("DISABLE")]
+        [Description("Tắt item một cách xác định; phù hợp để tháo phụ kiện.")]
+        public void Disable() {
+            OwnerAsset?.SetItemActiveByPath(GroupIndex, Path, false);
+        }
+    }
+
+    /// <summary>
+    /// Quy tắc hiển thị child dùng chung giữa các outfit. Ví dụ một rule
+    /// "Ears" với ChildNames = ["Ears"] có thể giữ tai tắt khi đổi outfit.
+    /// </summary>
+    public class OutfitChildVisibilityRule : StructuredData {
+
+        [DataInput]
+        [Label("RULE NAME")]
+        public string RuleName = "Ears";
+
+        [DataInput]
+        [Label("CHILD NAMES")]
+        [Description("Tên GameObject con cần điều khiển trong outfit đang active, vd Ears, Tail. So khớp tên chính xác, không phân biệt hoa thường.")]
+        public string[] ChildNames = Array.Empty<string>();
+
+        [DataInput]
+        [Label("VISIBLE")]
+        [Description("Trạng thái được giữ lại và tự áp dụng sau mỗi lần đổi outfit.")]
+        public bool Visible = true;
+
+        public OutfitSwitcherAsset OwnerAsset;
+        public int RuleIndex = -1;
+
+        [Trigger]
+        [Label("TOGGLE")]
+        public void Toggle() {
+            OwnerAsset?.ToggleChildVisibilityRule(RuleIndex);
+        }
+
+        [Trigger]
+        [Label("SHOW")]
+        public void Show() {
+            OwnerAsset?.SetChildVisibilityRule(RuleIndex, true);
+        }
+
+        [Trigger]
+        [Label("HIDE")]
+        public void Hide() {
+            OwnerAsset?.SetChildVisibilityRule(RuleIndex, false);
+        }
+    }
+
+    public class OutfitPresetEntry : StructuredData {
+
+        [DataInput]
+        [Label("GROUP NAME")]
+        public string GroupName = "Outfit";
+
+        [DataInput]
+        [Label("ITEM NAME OR PATH")]
+        public string ItemNameOrPath = "";
+
+        [DataInput]
+        [Label("ACTION")]
+        public OutfitPresetAction Action = OutfitPresetAction.Enable;
+    }
+
+    public class OutfitPreset : StructuredData {
+
+        [DataInput]
+        [Label("PRESET NAME")]
+        public string PresetName = "New Preset";
+
+        [DataInput]
+        [Label("ENTRIES")]
+        public OutfitPresetEntry[] Entries = Array.Empty<OutfitPresetEntry>();
+
+        public OutfitSwitcherAsset OwnerAsset;
+        public int PresetIndex = -1;
+
+        [Trigger]
+        [Label("APPLY PRESET")]
+        public void Apply() {
+            OwnerAsset?.ApplyPreset(PresetIndex);
         }
     }
 
@@ -121,23 +230,49 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         [Label("INTENSITY")]
         [Description("Độ chói tại đỉnh glow, nên 3~4")]
+        [FloatSlider(0f, 10f, 0.1f)]
         [HiddenIf(nameof(IsInstantTransition))]
         public float Intensity = 3f;
 
         [DataInput]
         [Label("DURATION (MS)")]
+        [IntegerSlider(100, 5000, 50)]
         [HiddenIf(nameof(IsInstantTransition))]
         public int DurationMs = 600;
 
         [DataInput]
         [Label("PEAK (0-1)")]
         [Description("Thời điểm lóa cực đại, 0.42 ≈ 0.25s với 600ms")]
+        [FloatSlider(0.05f, 0.95f, 0.01f)]
         [HiddenIf(nameof(IsInstantTransition))]
         public float PeakPercent = 0.42f;
 
         [DataInput]
+        [Label("IGNORE INACTIVE CHILDREN")]
+        [Description("Không glow các child đang tắt, ví dụ tai/đuôi đã tháo. Nên bật cho outfit có phụ kiện con.")]
+        [HiddenIf(nameof(IsInstantTransition))]
+        public bool IgnoreInactiveChildren = true;
+
+        [DataInput]
+        [Label("GLOW EXCLUDED PATHS")]
+        [Description("Các path cần loại khỏi glow. Có thể dùng path đầy đủ hoặc path con bên trong outfit, vd Ears, Tail.")]
+        [HiddenIf(nameof(IsInstantTransition))]
+        public string[] GlowExcludedPaths = Array.Empty<string>();
+
+        [DataInput]
+        [Label("ALLOW NONE")]
+        [Description("Cho phép tắt toàn bộ item trong group Switch bằng nút DISABLE ALL.")]
+        [HiddenIf(nameof(IsToggleGroup))]
+        public bool AllowNone = false;
+
+        // Legacy fields kept for backward-compatible scene migration.
+        [DataInput]
         [Hidden]
         public string LastActiveItem = "";
+
+        [DataInput]
+        [Hidden]
+        public string LastActivePath = "";
 
         // Nhận diện character đã scan — chặn restore/apply nhầm lên avatar khác
         // (path scan từ avatar cũ có thể khớp nhầm object trùng tên trên avatar mới).
@@ -148,6 +283,10 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         [Hidden]
         public string[] LastActiveItems = Array.Empty<string>();
+
+        [DataInput]
+        [Hidden]
+        public string[] LastActivePaths = Array.Empty<string>();
 
         // Hiển thị danh sách item sau scan — mỗi item có NAME, PATH và nút
         // 👗 WEAR riêng (dynamic trigger đúng nghĩa, không giới hạn số lượng).
@@ -163,10 +302,17 @@ namespace Warudo.Plugins.McpBridge {
         // ── Trigger ──
 
         [Trigger]
-        [Label("Scan Items")]
+        [Label("SCAN ITEMS")]
         [Description("Quét danh sách outfit theo folder/manual paths")]
         public void ScanItems() {
             OwnerAsset?.ScanGroup(this);
+        }
+
+        [Trigger]
+        [Label("DISABLE ALL")]
+        [Description("Tắt toàn bộ item. Group Switch chỉ thực hiện khi ALLOW NONE được bật.")]
+        public void DisableAll() {
+            OwnerAsset?.DisableAllItems(GroupIndex);
         }
 
         // ── HiddenIf conditions ──
@@ -174,5 +320,6 @@ namespace Warudo.Plugins.McpBridge {
         protected bool IsManualMode() => ScanMode == OutfitScanMode.Manual;
         protected bool IsAvatarFolderMode() => ScanMode == OutfitScanMode.AvatarFolder;
         protected bool IsInstantTransition() => Transition == OutfitTransition.Instant;
+        protected bool IsToggleGroup() => GroupType == OutfitGroupType.Toggle;
     }
 }
