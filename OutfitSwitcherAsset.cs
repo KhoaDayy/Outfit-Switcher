@@ -403,7 +403,7 @@ namespace Warudo.Plugins.McpBridge {
             }
             return names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray();
         }
-
+ 
         public void PreviewBlendShape(string skinnedMeshName, string blendShapeName, float weight) {
             var root = Character?.GameObject?.transform;
             if (root == null || string.IsNullOrWhiteSpace(blendShapeName)) return;
@@ -1422,7 +1422,7 @@ namespace Warudo.Plugins.McpBridge {
             group.SetDataInput(nameof(OutfitGroup.Items), group.Items, broadcast: true);
         }
 
-        private void UpdateStatus(string msg) {
+        public void UpdateStatus(string msg) {
             SetDataInput(nameof(Status), msg, broadcast: true);
         }
 
