@@ -57,11 +57,11 @@ namespace Warudo.Plugins.McpBridge {
     public class OutfitItem : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
-        [Label("NAME")]
+        [Label("Name")]
         public string DisplayName = "";
 
         [DataInput]
-        [Label("PATH")]
+        [Label("Path")]
         [Description("Path GameObject trong avatar")]
         public string Path = "";
 
@@ -79,7 +79,7 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         [Trigger]
-        [Label("WEAR")]
+        [Label("Wear")]
         [Description("Mặc / bật tắt item")]
         public void Wear() {
             OwnerAsset?.WearItemByPath(GroupIndex, Path);
@@ -94,11 +94,11 @@ namespace Warudo.Plugins.McpBridge {
     public class OutfitChildVisibilityRule : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
-        [Label("RULE NAME")]
+        [Label("Rule Name")]
         public string RuleName = "Ears";
 
         [DataInput]
-        [Label("CHILD NAMES")]
+        [Label("Child Names")]
         [Description("Tên GameObject con (vd Ears, Tail)")]
         [AutoComplete(nameof(AutoCompleteChildNames), forceSelection: false)]
         public string[] ChildNames = Array.Empty<string>();
@@ -111,7 +111,7 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         [DataInput]
-        [Label("VISIBLE")]
+        [Label("Visible")]
         [Description("Trạng thái hiển thị")]
         public bool Visible = true;
 
@@ -123,7 +123,7 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         [Trigger]
-        [Label("TOGGLE")]
+        [Label("Toggle")]
         public void Toggle() {
             OwnerAsset?.ToggleChildVisibilityRule(RuleIndex);
         }
@@ -132,15 +132,15 @@ namespace Warudo.Plugins.McpBridge {
     public class OutfitPresetEntry : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
-        [Label("GROUP NAME")]
+        [Label("Group Name")]
         public string GroupName = "Outfit";
 
         [DataInput]
-        [Label("ITEM NAME OR PATH")]
+        [Label("Item Name or Path")]
         public string ItemNameOrPath = "";
 
         [DataInput]
-        [Label("ACTION")]
+        [Label("Action")]
         public OutfitPresetAction Action = OutfitPresetAction.Enable;
 
         public string GetHeader() {
@@ -151,11 +151,11 @@ namespace Warudo.Plugins.McpBridge {
     public class OutfitPreset : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
-        [Label("PRESET NAME")]
+        [Label("Preset Name")]
         public string PresetName = "New Preset";
 
         [DataInput]
-        [Label("ENTRIES")]
+        [Label("Entries")]
         public OutfitPresetEntry[] Entries = Array.Empty<OutfitPresetEntry>();
 
         public OutfitSwitcherAsset OwnerAsset;
@@ -166,7 +166,7 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         [Trigger]
-        [Label("APPLY PRESET")]
+        [Label("Apply Preset")]
         public void Apply() {
             OwnerAsset?.ApplyPreset(PresetIndex);
         }
@@ -184,16 +184,16 @@ namespace Warudo.Plugins.McpBridge {
     public class OutfitGroup : StructuredData, ICollapsibleStructuredData {
 
         [DataInput]
-        [Label("GROUP NAME")]
+        [Label("Group Name")]
         [Description("Tên nhóm (vd Outfit, Hair)")]
         public string GroupName = "Outfit";
 
         [DataInput]
-        [Label("SCAN MODE")]
+        [Label("Scan Mode")]
         public OutfitScanMode ScanMode = OutfitScanMode.AvatarFolder;
 
         [DataInput]
-        [Label("FOLDER PATH")]
+        [Label("Folder Path")]
         [Description("Folder chứa outfit trong hierarchy")]
         [AutoComplete(nameof(AutoCompleteFolderPath), forceSelection: false)]
         [HiddenIf(nameof(IsManualMode))]
@@ -207,53 +207,53 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         [DataInput]
-        [Label("MANUAL PATHS")]
+        [Label("Manual Paths")]
         [Description("Danh sách path thủ công")]
         [HiddenIf(nameof(IsAvatarFolderMode))]
         public string[] ManualPaths = Array.Empty<string>();
 
         [DataInput]
-        [Label("GROUP TYPE")]
+        [Label("Group Type")]
         [Description("Switch: 1 active | Toggle: Bật/tắt tự do")]
         public OutfitGroupType GroupType = OutfitGroupType.Single;
 
         [DataInput]
-        [Label("TRANSITION")]
+        [Label("Transition")]
         public OutfitTransition Transition = OutfitTransition.Glow;
 
         [DataInput]
-        [Label("GLOW COLOR")]
+        [Label("Glow Color")]
         [HiddenIf(nameof(IsInstantTransition))]
         public Color GlowColor = new Color(1f, 0.4f, 0.8f, 1f);
 
         [DataInput]
-        [Label("INTENSITY")]
+        [Label("Intensity")]
         [Description("Độ sáng đỉnh glow")]
         [FloatSlider(0f, 10f, 0.1f)]
         [HiddenIf(nameof(IsInstantTransition))]
         public float Intensity = 3f;
 
         [DataInput]
-        [Label("DURATION (MS)")]
+        [Label("Duration (ms)")]
         [IntegerSlider(100, 5000, 50)]
         [HiddenIf(nameof(IsInstantTransition))]
         public int DurationMs = 600;
 
         [DataInput]
-        [Label("PEAK (0-1)")]
+        [Label("Peak (0-1)")]
         [Description("Thời điểm lóa đỉnh (0 - 1)")]
         [FloatSlider(0.05f, 0.95f, 0.01f)]
         [HiddenIf(nameof(IsInstantTransition))]
         public float PeakPercent = 0.42f;
 
         [DataInput]
-        [Label("IGNORE INACTIVE CHILDREN")]
+        [Label("Ignore Inactive Children")]
         [Description("Không glow phần tử đang tắt")]
         [HiddenIf(nameof(IsInstantTransition))]
         public bool IgnoreInactiveChildren = true;
 
         [DataInput]
-        [Label("GLOW EXCLUDED PATHS")]
+        [Label("Glow Excluded Paths")]
         [Description("Path loại khỏi glow")]
         [HiddenIf(nameof(IsInstantTransition))]
         public string[] GlowExcludedPaths = Array.Empty<string>();
@@ -281,7 +281,7 @@ namespace Warudo.Plugins.McpBridge {
         public string[] LastActivePaths = Array.Empty<string>();
 
         [DataInput]
-        [Label("ITEMS")]
+        [Label("Items")]
         [Description("Danh sách item đã scan")]
         public OutfitItem[] Items = Array.Empty<OutfitItem>();
 
@@ -296,7 +296,7 @@ namespace Warudo.Plugins.McpBridge {
         // ── Trigger ──
 
         [Trigger]
-        [Label("SCAN ITEMS")]
+        [Label("Scan Items")]
         [Description("Quét danh sách item")]
         public void ScanItems() {
             OwnerAsset?.ScanGroup(this);

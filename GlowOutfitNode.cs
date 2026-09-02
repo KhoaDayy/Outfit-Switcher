@@ -59,58 +59,58 @@ namespace Warudo.Plugins.McpBridge.Nodes {
         private static Shader _cachedAdditiveShader;
 
         [DataInput]
-        [Label("CHARACTER")]
+        [Label("Character")]
         public CharacterAsset Character;
 
         [DataInput]
-        [Label("GAMEOBJECT PATHS")]
+        [Label("GameObject Paths")]
         [Description("Path tới outfit cần glow")]
         public string[] GameObjectPaths = new[] { "Assets/Outfits/SuriMukeki" };
 
         [DataInput]
-        [Label("GLOW COLOR")]
+        [Label("Glow Color")]
         [Description("Màu sắc glow")]
         public Color GlowColor = new Color(1f, 0.4f, 0.8f, 1f);
 
         [DataInput]
-        [Label("INTENSITY")]
+        [Label("Intensity")]
         [Description("Độ sáng đỉnh (khuyên dùng 3~4)")]
         public float Intensity = 3f;
 
         [DataInput]
-        [Label("EXTRUSION (M)")]
+        [Label("Extrusion (m)")]
         [Description("Độ dày lớp overlay")]
         [FloatSlider(0f, 0.03f, 0.001f)]
         public float Extrusion = 0.005f;
 
         [DataInput]
-        [Label("DURATION (MS)")]
+        [Label("Duration (ms)")]
         [IntegerSlider(100, 5000, 50)]
         public int DurationMs = 600;
 
         [DataInput]
-        [Label("PEAK (0-1)")]
+        [Label("Peak (0-1)")]
         [Description("Thời điểm lóa đỉnh (0 - 1)")]
         [FloatSlider(0.05f, 0.95f, 0.01f)]
         public float PeakPercent = 0.42f;
 
         [DataInput]
-        [Label("SWAP GAMEOBJECT PATHS (ĐỒ MỚI)")]
+        [Label("Swap GameObject Paths (Đồ mới)")]
         [Description("Path tới outfit mới sau swap")]
         public string[] SwapGameObjectPaths;
 
         [DataInput]
-        [Label("IGNORE INACTIVE CHILDREN")]
+        [Label("Ignore Inactive Children")]
         [Description("Bỏ qua renderer đang tắt")]
         public bool IgnoreInactiveChildren = false;
 
         [DataInput]
-        [Label("EXCLUDED PATHS")]
+        [Label("Excluded Paths")]
         [Description("Path loại khỏi glow")]
         public string[] ExcludedPaths = Array.Empty<string>();
 
         [DataInput]
-        [Label("DEBUG LOGS")]
+        [Label("Debug Logs")]
         [Description("Bật log chi tiết")]
         public bool DebugLogs = false;
 

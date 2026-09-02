@@ -34,21 +34,21 @@ namespace Warudo.Plugins.McpBridge {
 
         [Section("1. Setup", 0)]
         [DataInput]
-        [Label("CHARACTER")]
+        [Label("Character")]
         public CharacterAsset Character;
 
         [DataInput]
-        [Label("GROUPS")]
+        [Label("Groups")]
         [Description("Danh sách nhóm trang phục/phụ kiện")]
         public OutfitGroup[] Groups = Array.Empty<OutfitGroup>();
 
         [DataInput]
-        [Label("CHILD VISIBILITY RULES")]
+        [Label("Child Visibility Rules")]
         [Description("Quy tắc ẩn/hiện part con (vd Tai, Đuôi)")]
         public OutfitChildVisibilityRule[] ChildVisibilityRules = Array.Empty<OutfitChildVisibilityRule>();
 
         [DataInput]
-        [Label("PRESETS")]
+        [Label("Presets")]
         [Description("Combo trang phục & phụ kiện")]
         public OutfitPreset[] Presets = Array.Empty<OutfitPreset>();
 
@@ -284,7 +284,7 @@ namespace Warudo.Plugins.McpBridge {
                             var port = new TriggerPort(itemKey, () => WearItemByPath(capturedG, capturedPath), new TriggerProperties {
                                 label = itemName,
                                 description = item.Path,
-                                sectionTitle = isFirstInGroup ? groupName.ToUpper() : null,
+                                sectionTitle = isFirstInGroup ? groupName : null,
                                 order = currentOrder++
                             });
                             TriggerPortCollection.AddPort(port);
@@ -307,7 +307,7 @@ namespace Warudo.Plugins.McpBridge {
                     var port = new TriggerPort(ruleKey, () => ToggleChildVisibilityRule(capturedR), new TriggerProperties {
                         label = $"Toggle {ruleName}",
                         description = $"Bật/tắt {ruleName}",
-                        sectionTitle = (r == 0) ? "CHILD VISIBILITY" : null,
+                        sectionTitle = (r == 0) ? "Child Visibility" : null,
                         order = currentOrder++
                     });
                     TriggerPortCollection.AddPort(port);
@@ -328,7 +328,7 @@ namespace Warudo.Plugins.McpBridge {
                     var port = new TriggerPort(presetKey, () => ApplyPreset(capturedP), new TriggerProperties {
                         label = presetName,
                         description = $"Áp dụng preset '{presetName}'",
-                        sectionTitle = (p == 0) ? "PRESETS" : null,
+                        sectionTitle = (p == 0) ? "Presets" : null,
                         order = currentOrder++
                     });
                     TriggerPortCollection.AddPort(port);

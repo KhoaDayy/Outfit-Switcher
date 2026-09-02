@@ -50,30 +50,30 @@ namespace Warudo.Plugins.McpBridge.Nodes {
     public class OutfitSwitchNode : Node {
 
         [DataInput]
-        [Label("SWITCHER")]
+        [Label("Switcher")]
         [Description("Asset điều khiển")]
         public OutfitSwitcherAsset Switcher;
 
         [DataInput]
-        [Label("ACTION")]
+        [Label("Action")]
         [Description("Hành động chuyển đổi")]
         public OutfitSwitchAction Action = OutfitSwitchAction.SwitchToItem;
 
         [DataInput]
-        [Label("GROUP")]
+        [Label("Group")]
         [AutoComplete(nameof(AutoCompleteGroupName), forceSelection: true)]
         [HiddenIf(nameof(IsPresetAction))]
         public string GroupName = "Outfit";
 
         [DataInput]
-        [Label("ITEM")]
+        [Label("Item")]
         [Description("Tên hoặc path của item")]
         [AutoComplete(nameof(AutoCompleteItem), forceSelection: true)]
         [HiddenIf(nameof(ShouldHideItem))]
         public string ItemName = "";
 
         [DataInput]
-        [Label("PRESET")]
+        [Label("Preset")]
         [AutoComplete(nameof(AutoCompletePreset), forceSelection: true)]
         [HiddenIf(nameof(IsNotPresetAction))]
         public string PresetName = "";
