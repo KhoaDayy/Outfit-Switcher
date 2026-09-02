@@ -7,7 +7,7 @@ Hệ thống quản lý và chuyển đổi trang phục / phụ kiện (Outfit,
 ## ✨ Tính năng nổi bật (Key Features)
 
 - 🗂️ **Quản lý đa nhóm (Multi-Group Support)**:
-  - Phân chia trang phục thành nhiều nhóm độc lập (ví dụ: *Outfit*, *Hair*, *Glasses*, *Hats*, *Accessories*).
+  - Phân chia trang phục thành nhiều nhóm độc lập (ví dụ: *Outfit*, *Hair*, *Glasses*, *Hats*, *Accessories*) — không giới hạn số group / số item.
 - 🔍 **Tự động quét Avatar Hierarchy (Smart Scanner)**:
   - **Avatar Folder Mode**: Chỉ cần nhập đường dẫn thư mục cha (ví dụ `Clothes/Outfits`), hệ thống tự động quét tất cả các GameObject con thành từng bộ đồ.
   - **Manual Paths Mode**: Nhập danh sách đường dẫn thủ công cho các avatar có cấu trúc phân tán.
@@ -20,7 +20,10 @@ Hệ thống quản lý và chuyển đổi trang phục / phụ kiện (Outfit,
   - Tùy chỉnh tự do: Màu Glow (`GlowColor`), Độ sáng đỉnh (`Intensity`), Thời gian chuyển (`DurationMs`), Điểm lóa cực đại (`PeakPercent`).
   - Hỗ trợ fallback mượt mà cho các avatar tắt tính năng đọc mesh (`isReadable = false`).
 - 🔘 **Giao diện Dynamic Triggers trực quan**:
-  - Sau khi quét, từng món đồ sẽ hiển thị dưới dạng nút bấm trigger ngay trên Asset Inspector trong Warudo.
+  - Sau khi quét, từng món đồ hiển thị trong danh sách **Items** của group với đúng tên đồ và nút **👗 WEAR / TOGGLE** riêng ngay trên Asset Inspector.
+  - Thêm nút **Next / Prev Item** cho 3 group đầu tiên để chuyển đồ nhanh.
+- 🛡️ **Bảo vệ khi đổi avatar (Character Guard)**:
+  - Trạng thái đã lưu chỉ được restore khi đúng character đã scan — tránh bật/tắt nhầm object trùng tên trên avatar khác. Đổi avatar mới chỉ cần bấm lại **Scan Items**.
 - 🧩 **Tích hợp Blueprint Node mạnh mẽ**:
   - `Outfit Switcher` Node: Hỗ trợ `Switch To Item`, `Next Item`, `Previous Item`, và `Random Item`.
   - `GLOW OUTFIT` Node: Node độc lập để phát hiệu ứng glow chuyển đồ tùy ý trong graph.
@@ -76,7 +79,7 @@ Outfit-Switcher/
 3. Bấm **Scan Items** để hệ thống quét toàn bộ danh sách đồ.
 
 ### 3. Đổi trang phục
-- **Cách 1 (Trực tiếp)**: Bấm trực tiếp vào các nút Trigger tên từng bộ đồ hiển thị trên Asset.
+- **Cách 1 (Trực tiếp)**: Mở danh sách **Items** trong group, bấm nút **👗 WEAR / TOGGLE** trên từng item; hoặc dùng **Next / Prev Item** để xoay vòng.
 - **Cách 2 (Blueprint Graph)**:
   - Thêm node **Outfit Switcher** (`NodeType: Hasukatsu -> Outfit Switcher`).
   - Nối tham chiếu `Switcher` tới `OutfitSwitcherAsset`.

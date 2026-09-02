@@ -60,6 +60,16 @@ namespace Warudo.Plugins.McpBridge {
         // (không phải DataInput — tránh serialize tham chiếu asset trong structured data)
         public OutfitSwitcherAsset OwnerAsset;
         public int GroupIndex = -1;
+
+        // ── Trigger — mặc item này (hiển thị ngay cạnh NAME/PATH trong UI) ──
+        // Dùng Path làm key (unique sau scan) thay vì DisplayName — tránh
+        // mặc nhầm item khi 2 path khác nhau có cùng leaf name.
+        [Trigger]
+        [Label("👗 WEAR / TOGGLE")]
+        [Description("Mặc item này (Switch group: tắt toàn bộ item khác; Toggle group: bật/tắt độc lập)")]
+        public void Wear() {
+            OwnerAsset?.WearItemByPath(GroupIndex, Path);
+        }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -68,8 +78,8 @@ namespace Warudo.Plugins.McpBridge {
 
     /// <summary>
     /// Một nhóm outfit: quét folder/manual paths → danh sách OutfitItem[].
-    /// Bấm trigger ScanItems để quét. Các item được hiển thị như trigger
-    /// buttons trên OutfitSwitcherAsset (G1/G2/G3).
+    /// Bấm trigger ScanItems để quét. Mỗi item trong danh sách Items có nút
+    /// 👗 WEAR riêng; Next/Prev nhanh cho 3 group đầu nằm trên Asset.
     /// </summary>
     public class OutfitGroup : StructuredData {
 
@@ -129,12 +139,21 @@ namespace Warudo.Plugins.McpBridge {
         [Hidden]
         public string LastActiveItem = "";
 
+        // Nhận diện character đã scan — chặn restore/apply nhầm lên avatar khác
+        // (path scan từ avatar cũ có thể khớp nhầm object trùng tên trên avatar mới).
+        [DataInput]
+        [Hidden]
+        public string ScannedCharacterId = "";
+
         [DataInput]
         [Hidden]
         public string[] LastActiveItems = Array.Empty<string>();
 
+        // Hiển thị danh sách item sau scan — mỗi item có NAME, PATH và nút
+        // 👗 WEAR riêng (dynamic trigger đúng nghĩa, không giới hạn số lượng).
         [DataInput]
-        [Hidden]
+        [Label("ITEMS")]
+        [Description("Danh sách item đã scan. Bấm 👗 WEAR trên từng item để đổi đồ.")]
         public OutfitItem[] Items = Array.Empty<OutfitItem>();
 
         // Runtime links — được set lại bởi OutfitSwitcherAsset.LinkGroups()
