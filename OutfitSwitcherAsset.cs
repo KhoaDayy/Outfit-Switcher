@@ -80,20 +80,21 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         // ═══════════════════════════════════════════════════════
-        // BACKUP & SHARE
+        // OUTFIT PROFILES (SAVE / LOAD / SHARE)
         // ═══════════════════════════════════════════════════════
 
-        [Section("2. Backup & Share", 10)]
-        [DataInput]
-        [Label("Config JSON")]
-        [Description("Chuỗi JSON cấu hình để copy / share / backup")]
-        public string ConfigJson = "";
-
+        [Section("2. Profiles", 10)]
         [Trigger]
-        [Label("Export to JSON")]
-        [Description("Xuất toàn bộ cấu hình ra chuỗi JSON và copy vào clipboard")]
-        public void ExportConfig() {
+        [Label("Save Outfit Profile")]
+        [Description("Save the following settings as an outfit profile. Outfit profiles can be applied on any character in any scene.")]
+        public void SaveProfile() {
+            var profileName = string.IsNullOrWhiteSpace(ProfileName) ? (Character?.Name ?? "Default") : ProfileName;
             try {
+                var folder = GetProfilesFolder();
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                var safeName = SanitizeFileName(profileName);
+                var filePath = Path.Combine(folder, $"{safeName}.json");
+
                 var data = new OutfitSwitcherBackupData {
                     Version = "1.0",
                     AvatarName = Character?.Name ?? "Unknown",
@@ -108,28 +109,38 @@ namespace Warudo.Plugins.McpBridge {
                     NullValueHandling = NullValueHandling.Ignore
                 };
                 var json = JsonConvert.SerializeObject(data, settings);
-                SetDataInput(nameof(ConfigJson), json, broadcast: true);
-                UpdateStatus("Đã xuất cấu hình ra ô 'Config JSON' bên dưới!");
+                File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
+                SetDataInput(nameof(ConfigJson), json, broadcast: false);
+                SetDataInput(nameof(ProfileName), safeName, broadcast: true);
+                UpdateStatus($"Đã lưu outfit profile **{safeName}** vào thư mục OutfitProfiles!");
             } catch (Exception ex) {
-                ReportError("Export thất bại: " + ex.Message);
+                ReportError("Lưu profile thất bại: " + ex.Message);
             }
         }
 
         [Trigger]
-        [Label("Import from JSON")]
-        [Description("Nhập toàn bộ cấu hình từ chuỗi JSON")]
-        public void ImportConfig() {
-            if (string.IsNullOrWhiteSpace(ConfigJson)) {
-                ReportError("Vui lòng dán chuỗi JSON vào ô 'Config JSON' trước.");
+        [Label("Load Outfit Profile")]
+        [Description("Load an existing outfit profile. Following settings will be overridden.")]
+        public void LoadProfile() {
+            if (string.IsNullOrWhiteSpace(ProfileName)) {
+                ReportError("Vui lòng chọn hoặc nhập tên Profile Name cần nạp.");
                 return;
             }
             try {
+                var folder = GetProfilesFolder();
+                var safeName = SanitizeFileName(ProfileName);
+                var filePath = Path.Combine(folder, $"{safeName}.json");
+                if (!File.Exists(filePath)) {
+                    ReportError($"Không tìm thấy profile '{safeName}.json' trong thư mục OutfitProfiles.");
+                    return;
+                }
+                var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
                 var settings = new JsonSerializerSettings {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore
                 };
-                var data = JsonConvert.DeserializeObject<OutfitSwitcherBackupData>(ConfigJson, settings);
+                var data = JsonConvert.DeserializeObject<OutfitSwitcherBackupData>(json, settings);
                 if (data == null) {
-                    ReportError("Dữ liệu JSON không hợp lệ.");
+                    ReportError("Dữ liệu profile không hợp lệ.");
                     return;
                 }
                 if (data.Groups != null) {
@@ -141,6 +152,7 @@ namespace Warudo.Plugins.McpBridge {
                 if (data.Presets != null) {
                     SetDataInput(nameof(Presets), data.Presets, broadcast: true);
                 }
+                SetDataInput(nameof(ConfigJson), json, broadcast: false);
                 LinkRuntimeData();
                 if (Character?.GameObject != null) {
                     foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
@@ -150,49 +162,59 @@ namespace Warudo.Plugins.McpBridge {
                     ApplyChildVisibilityRules();
                 }
                 RebuildDynamicTriggers();
-                UpdateStatus($"Đã nhập thành công cấu hình! (Avatar: {data.AvatarName}, ngày: {data.ExportDate})");
+                UpdateStatus($"Đã nạp outfit profile **{safeName}** thành công! (Avatar gốc: {data.AvatarName}, ngày: {data.ExportDate})");
                 Broadcast();
             } catch (Exception ex) {
-                ReportError("Import thất bại: " + ex.Message);
+                ReportError("Nạp profile thất bại: " + ex.Message);
             }
         }
 
         [Trigger]
-        [Label("Export to File")]
-        [Description("Lưu file backup vào thư mục StreamingAssets")]
-        public void ExportToFile() {
+        [Label("Open Outfit Profiles Folder")]
+        [Description("Mở thư mục chứa các file Profile trong File Explorer")]
+        public void OpenProfilesFolder() {
             try {
-                ExportConfig();
-                if (string.IsNullOrWhiteSpace(ConfigJson)) return;
-                var charName = string.IsNullOrWhiteSpace(Character?.Name) ? "Avatar" : Character.Name.Replace("/", "_").Replace("\\", "_");
-                var fileName = $"OutfitSwitcher_{charName}.json";
-                var fullPath = Path.Combine(Application.streamingAssetsPath, fileName);
-                File.WriteAllText(fullPath, ConfigJson, System.Text.Encoding.UTF8);
-                UpdateStatus($"Đã lưu file backup: **{fileName}** trong StreamingAssets!");
+                var folder = GetProfilesFolder();
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
+                    FileName = folder,
+                    UseShellExecute = true
+                });
             } catch (Exception ex) {
-                ReportError("Lưu file thất bại: " + ex.Message);
+                ReportError("Không thể mở thư mục: " + ex.Message);
             }
         }
 
-        [Trigger]
-        [Label("Import from File")]
-        [Description("Đọc file backup từ thư mục StreamingAssets")]
-        public void ImportFromFile() {
-            try {
-                var charName = string.IsNullOrWhiteSpace(Character?.Name) ? "Avatar" : Character.Name.Replace("/", "_").Replace("\\", "_");
-                var fileName = $"OutfitSwitcher_{charName}.json";
-                var fullPath = Path.Combine(Application.streamingAssetsPath, fileName);
-                if (!File.Exists(fullPath)) {
-                    ReportError($"Không tìm thấy file '{fileName}' trong StreamingAssets.");
-                    return;
-                }
-                var json = File.ReadAllText(fullPath, System.Text.Encoding.UTF8);
-                SetDataInput(nameof(ConfigJson), json, broadcast: true);
-                ImportConfig();
-                UpdateStatus($"Đã nạp file backup: **{fileName}** thành công!");
-            } catch (Exception ex) {
-                ReportError("Đọc file thất bại: " + ex.Message);
-            }
+        [DataInput]
+        [Label("Profile Name")]
+        [Description("Tên profile (click dropdown để chọn profile có sẵn)")]
+        [AutoComplete(nameof(AutoCompleteProfileNames), forceSelection: false)]
+        public string ProfileName = "Default";
+
+        protected UniTask<AutoCompleteList> AutoCompleteProfileNames() {
+            var folder = GetProfilesFolder();
+            if (!Directory.Exists(folder)) return UniTask.FromResult(AutoCompleteList.Single(new List<AutoCompleteEntry>()));
+            var files = Directory.GetFiles(folder, "*.json")
+                .Select(f => Path.GetFileNameWithoutExtension(f))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(files));
+        }
+
+        [DataInput]
+        [Label("Raw Config (JSON)")]
+        [Description("Chuỗi JSON để copy/paste thủ công nếu muốn")]
+        public string ConfigJson = "";
+
+        private static string GetProfilesFolder() {
+            return Path.Combine(Application.streamingAssetsPath, "OutfitProfiles");
+        }
+
+        private static string SanitizeFileName(string name) {
+            var invalid = Path.GetInvalidFileNameChars();
+            return string.Concat(name.Split(invalid, StringSplitOptions.RemoveEmptyEntries)).Trim();
         }
 
         // ═══════════════════════════════════════════════════════
