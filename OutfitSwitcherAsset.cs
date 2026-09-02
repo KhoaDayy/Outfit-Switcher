@@ -34,9 +34,10 @@ namespace Warudo.Plugins.McpBridge {
     )]
     public class OutfitSwitcherAsset : Asset {
 
-        [Section("Setup", 0)]
+        [Section("Setup", 10)]
         [DataInput]
         [Label("Character")]
+        [Description("Chọn nhân vật để điều khiển outfit")]
         public CharacterAsset Character;
 
         [DataInput]
@@ -84,7 +85,7 @@ namespace Warudo.Plugins.McpBridge {
         // OUTFIT PROFILES (SAVE / LOAD / SHARE)
         // ═══════════════════════════════════════════════════════
 
-        [Section("Profiles", 10)]
+        [Section("Profiles", 0)]
         [DataInput]
         [Label("Profile Name")]
         [Description("Tên profile (chọn từ dropdown hoặc nhập tên mới để lưu)")]
@@ -193,7 +194,7 @@ namespace Warudo.Plugins.McpBridge {
             
             public override bool CanWrite => false;
         }
-
+ 
         [Trigger]
         [Label("Save Outfit Profile")]
         [Description("Lưu cấu hình hiện tại thành file profile theo Profile Name ở trên.")]
