@@ -134,6 +134,31 @@ namespace Warudo.Plugins.McpBridge {
                 ? "BlendShape"
                 : $"{BlendShapeName} ({(string.IsNullOrWhiteSpace(SkinnedMeshName) ? "All" : SkinnedMeshName)}: {VisibleValue}/{HiddenValue})";
         }
+
+        [Trigger]
+        [Label("Preview Visible")]
+        [Description("Xem trước giá trị khi Bật")]
+        public void PreviewVisible() {
+            OwnerAsset?.PreviewBlendShape(SkinnedMeshName, BlendShapeName, VisibleValue);
+        }
+
+        [Trigger]
+        [Label("Preview Hidden")]
+        [Description("Xem trước giá trị khi Tắt")]
+        public void PreviewHidden() {
+            OwnerAsset?.PreviewBlendShape(SkinnedMeshName, BlendShapeName, HiddenValue);
+        }
+
+        [Trigger]
+        [Label("Fetch Current")]
+        [Description("Lấy giá trị thực tế đang có trên Avatar vào ô Visible")]
+        public void FetchCurrent() {
+            var current = OwnerAsset?.GetCurrentBlendShapeWeight(SkinnedMeshName, BlendShapeName);
+            if (current.HasValue) {
+                SetDataInput(nameof(VisibleValue), current.Value, broadcast: true);
+                OwnerAsset?.UpdateStatus($"Đã lấy giá trị hiện tại của **{BlendShapeName}**: {current.Value:F0}");
+            }
+        }
     }
 
     /// <summary>
@@ -180,6 +205,18 @@ namespace Warudo.Plugins.McpBridge {
         [Label("Toggle")]
         public void Toggle() {
             OwnerAsset?.ToggleChildVisibilityRule(RuleIndex);
+        }
+
+        [Trigger]
+        [Label("Preview Visible")]
+        public void PreviewVisible() {
+            OwnerAsset?.SetChildVisibilityRule(RuleIndex, true);
+        }
+
+        [Trigger]
+        [Label("Preview Hidden")]
+        public void PreviewHidden() {
+            OwnerAsset?.SetChildVisibilityRule(RuleIndex, false);
         }
     }
 

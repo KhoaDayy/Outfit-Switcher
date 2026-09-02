@@ -404,6 +404,40 @@ namespace Warudo.Plugins.McpBridge {
             return names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
+        public void PreviewBlendShape(string skinnedMeshName, string blendShapeName, float weight) {
+            var root = Character?.GameObject?.transform;
+            if (root == null || string.IsNullOrWhiteSpace(blendShapeName)) return;
+            var smrs = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            int appliedCount = 0;
+            foreach (var smr in smrs) {
+                if (smr == null || smr.sharedMesh == null) continue;
+                if (!string.IsNullOrWhiteSpace(skinnedMeshName) && !string.Equals(smr.name, skinnedMeshName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                int bsIndex = smr.sharedMesh.GetBlendShapeIndex(blendShapeName);
+                if (bsIndex >= 0) {
+                    smr.SetBlendShapeWeight(bsIndex, weight);
+                    appliedCount++;
+                }
+            }
+            UpdateStatus($"Preview **{blendShapeName}** = {weight:F0} (trên {appliedCount} mesh)");
+        }
+
+        public float? GetCurrentBlendShapeWeight(string skinnedMeshName, string blendShapeName) {
+            var root = Character?.GameObject?.transform;
+            if (root == null || string.IsNullOrWhiteSpace(blendShapeName)) return null;
+            var smrs = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            foreach (var smr in smrs) {
+                if (smr == null || smr.sharedMesh == null) continue;
+                if (!string.IsNullOrWhiteSpace(skinnedMeshName) && !string.Equals(smr.name, skinnedMeshName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                int bsIndex = smr.sharedMesh.GetBlendShapeIndex(blendShapeName);
+                if (bsIndex >= 0) {
+                    return smr.GetBlendShapeWeight(bsIndex);
+                }
+            }
+            return null;
+        }
+
         /// <summary>
         /// Danh sách toàn bộ GameObject non-bone (dưới dạng relative path) cho autocomplete Manual Paths.
         /// </summary>
