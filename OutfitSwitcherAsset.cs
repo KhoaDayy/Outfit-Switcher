@@ -83,83 +83,31 @@ namespace Warudo.Plugins.McpBridge {
         // OUTFIT PROFILES (SAVE / LOAD / SHARE)
         // ═══════════════════════════════════════════════════════
 
-        public void TriggerSaveProfile() {
-            SaveProfileModal().Forget();
+        [Section("Profiles", 10)]
+        [DataInput]
+        [Label("Profile Name")]
+        [Description("Tên profile (chọn từ dropdown hoặc nhập tên mới để lưu)")]
+        [AutoComplete(nameof(AutoCompleteProfileNames), forceSelection: false)]
+        public string ProfileName = "Default";
+
+        protected UniTask<AutoCompleteList> AutoCompleteProfileNames() {
+            var folder = GetProfilesFolder();
+            if (!Directory.Exists(folder)) return UniTask.FromResult(AutoCompleteList.Single(new List<AutoCompleteEntry>()));
+            var files = Directory.GetFiles(folder, "*.json")
+                .Select(f => Path.GetFileNameWithoutExtension(f))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .Select(name => new AutoCompleteEntry { label = name, value = name })
+                .ToList();
+            return UniTask.FromResult(AutoCompleteList.Single(files));
         }
 
-        private async UniTaskVoid SaveProfileModal() {
-            try {
-                if (Context.StructuredDataTypeRegistry != null && !Context.StructuredDataTypeRegistry.IsTypeRegistered(typeof(SaveOutfitProfileData))) {
-                    Context.StructuredDataTypeRegistry.RegisterType(typeof(SaveOutfitProfileData));
-                }
-                var defaultName = Character?.Name ?? "Default";
-                var result = await Context.Service.PromptStructuredDataInput<SaveOutfitProfileData>(
-                    "Save Outfit Profile",
-                    data => {
-                        data.ProfileName = defaultName;
-                    }
-                );
-                if (result == null) {
-                    Debug.LogWarning("[OutfitSwitcher] Save profile modal cancelled.");
-                    return;
-                }
-                var profileName = !string.IsNullOrWhiteSpace(result.ProfileName) ? result.ProfileName : result.GetDataInput<string>(nameof(SaveOutfitProfileData.ProfileName));
-                if (string.IsNullOrWhiteSpace(profileName)) {
-                    profileName = defaultName;
-                }
-                SaveProfile(profileName);
-            } catch (Exception ex) {
-                ReportError("Lỗi khi mở modal lưu profile: " + ex.Message);
-                Debug.LogException(ex);
-            }
-        }
-
-        public void TriggerLoadProfile() {
-            LoadProfileModal().Forget();
-        }
-
-        private async UniTaskVoid LoadProfileModal() {
-            try {
-                if (Context.StructuredDataTypeRegistry != null && !Context.StructuredDataTypeRegistry.IsTypeRegistered(typeof(LoadOutfitProfileData))) {
-                    Context.StructuredDataTypeRegistry.RegisterType(typeof(LoadOutfitProfileData));
-                }
-                var result = await Context.Service.PromptStructuredDataInput<LoadOutfitProfileData>(
-                    "Load Outfit Profile",
-                    data => {
-                        data.ProfileName = "";
-                    }
-                );
-                if (result == null) {
-                    Debug.LogWarning("[OutfitSwitcher] Load profile modal cancelled.");
-                    return;
-                }
-                var profileName = !string.IsNullOrWhiteSpace(result.ProfileName) ? result.ProfileName : result.GetDataInput<string>(nameof(LoadOutfitProfileData.ProfileName));
-                if (string.IsNullOrWhiteSpace(profileName)) {
-                    ReportError("Vui lòng chọn Profile Name cần nạp.");
-                    return;
-                }
-                LoadProfile(profileName);
-            } catch (Exception ex) {
-                ReportError("Lỗi khi mở modal nạp profile: " + ex.Message);
-                Debug.LogException(ex);
-            }
-        }
-
-        public void OpenProfilesFolder() {
-            try {
-                var folder = GetProfilesFolder();
-                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
-                    FileName = folder,
-                    UseShellExecute = true
-                });
-            } catch (Exception ex) {
-                ReportError("Không thể mở thư mục: " + ex.Message);
-            }
-        }
-
-        public void SaveProfile(string profileName) {
-            if (string.IsNullOrWhiteSpace(profileName)) return;
+        [Section("Profiles", 10)]
+        [Trigger]
+        [Label("Save Outfit Profile")]
+        [Description("Lưu cấu hình hiện tại thành file profile theo Profile Name ở trên.")]
+        public void SaveProfile() {
+            var profileName = string.IsNullOrWhiteSpace(ProfileName) ? (Character?.Name ?? "Default") : ProfileName;
             try {
                 var folder = GetProfilesFolder();
                 if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
@@ -182,16 +130,24 @@ namespace Warudo.Plugins.McpBridge {
                 };
                 var json = JsonConvert.SerializeObject(data, settings);
                 File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
-                UpdateStatus($"Đã lưu outfit profile **{safeName}**!");
-                Debug.Log($"[OutfitSwitcher] Successfully saved profile '{safeName}' to: {filePath}");
+                SetDataInput(nameof(ProfileName), safeName, broadcast: true);
+                UpdateStatus($"Đã lưu outfit profile **{safeName}.json** thành công!");
+                Broadcast();
             } catch (Exception ex) {
                 ReportError("Lưu profile thất bại: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
-        public void LoadProfile(string profileName) {
-            if (string.IsNullOrWhiteSpace(profileName)) return;
+        [Section("Profiles", 10)]
+        [Trigger]
+        [Label("Load Outfit Profile")]
+        [Description("Nạp profile đã chọn ở Profile Name và áp dụng vào avatar.")]
+        public void LoadProfile() {
+            var profileName = ProfileName;
+            if (string.IsNullOrWhiteSpace(profileName)) {
+                ReportError("Vui lòng chọn hoặc nhập Profile Name cần nạp.");
+                return;
+            }
             try {
                 var folder = GetProfilesFolder();
                 var safeName = SanitizeFileName(profileName);
@@ -234,6 +190,23 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
+        [Section("Profiles", 10)]
+        [Trigger]
+        [Label("Open Outfit Profiles Folder")]
+        [Description("Mở thư mục chứa các file Profile trong File Explorer.")]
+        public void OpenProfilesFolder() {
+            try {
+                var folder = GetProfilesFolder();
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
+                    FileName = folder,
+                    UseShellExecute = true
+                });
+            } catch (Exception ex) {
+                ReportError("Không thể mở thư mục: " + ex.Message);
+            }
+        }
+
         public static string GetProfilesFolder() {
             return Path.Combine(Application.streamingAssetsPath, "OutfitProfiles");
         }
@@ -248,18 +221,6 @@ namespace Warudo.Plugins.McpBridge {
         // ═══════════════════════════════════════════════════════
         protected override void OnCreate() {
             base.OnCreate();
-            try {
-                if (Context.StructuredDataTypeRegistry != null) {
-                    if (!Context.StructuredDataTypeRegistry.IsTypeRegistered(typeof(SaveOutfitProfileData))) {
-                        Context.StructuredDataTypeRegistry.RegisterType(typeof(SaveOutfitProfileData));
-                    }
-                    if (!Context.StructuredDataTypeRegistry.IsTypeRegistered(typeof(LoadOutfitProfileData))) {
-                        Context.StructuredDataTypeRegistry.RegisterType(typeof(LoadOutfitProfileData));
-                    }
-                }
-            } catch (Exception ex) {
-                Debug.LogWarning("[OutfitSwitcher] Error registering StructuredData: " + ex.Message);
-            }
             Watch<CharacterAsset>(nameof(Character), (from, to) => OnCharacterChanged(from, to));
             WatchAll(new[] { nameof(Groups), nameof(ChildVisibilityRules), nameof(Presets) }, LinkRuntimeData);
             LinkRuntimeData();
@@ -465,32 +426,6 @@ namespace Warudo.Plugins.McpBridge {
                 }
             }
             _dynamicTriggerKeys.Clear();
-
-            // 0. Tạo 3 nút Profiles cố định ở mục Profiles
-            var savePort = new TriggerPort("profile_save", () => TriggerSaveProfile(), new TriggerProperties {
-                label = "Save Outfit Profile",
-                description = "Save the following settings as an outfit profile. Outfit profiles can be applied on any character in any scene.",
-                sectionTitle = "Profiles",
-                order = 10f
-            });
-            TriggerPortCollection.AddPort(savePort);
-            _dynamicTriggerKeys.Add("profile_save");
-
-            var loadPort = new TriggerPort("profile_load", () => TriggerLoadProfile(), new TriggerProperties {
-                label = "Load Outfit Profile",
-                description = "Load an existing outfit profile. Following settings will be overridden.",
-                order = 11f
-            });
-            TriggerPortCollection.AddPort(loadPort);
-            _dynamicTriggerKeys.Add("profile_load");
-
-            var openPort = new TriggerPort("profile_open", () => OpenProfilesFolder(), new TriggerProperties {
-                label = "Open Outfit Profiles Folder",
-                description = "Open the folder containing outfit profile files in file explorer.",
-                order = 12f
-            });
-            TriggerPortCollection.AddPort(openPort);
-            _dynamicTriggerKeys.Add("profile_open");
 
             float currentOrder = 100f;
 
