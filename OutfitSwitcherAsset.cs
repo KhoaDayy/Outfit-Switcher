@@ -103,6 +103,7 @@ namespace Warudo.Plugins.McpBridge {
             SaveProfile(result.ProfileName);
         }
 
+        [Section("2. Profiles", 10)]
         [Trigger]
         [Label("Load Outfit Profile")]
         [Description("Load an existing outfit profile. Following settings will be overridden.")]
@@ -121,6 +122,7 @@ namespace Warudo.Plugins.McpBridge {
             LoadProfile(result.ProfileName);
         }
 
+        [Section("2. Profiles", 10)]
         [Trigger]
         [Label("Open Outfit Profiles Folder")]
         [Description("Open the folder containing outfit profile files in file explorer.")]
