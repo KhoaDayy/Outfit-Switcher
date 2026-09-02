@@ -532,11 +532,20 @@ namespace Warudo.Plugins.McpBridge {
         public void RebuildDynamicTriggers() {
             if (TriggerPortCollection == null) return;
 
-            // Xóa các trigger động cũ
-            foreach (var key in _dynamicTriggerKeys) {
-                if (TriggerPortCollection.ContainsPort(key)) {
-                    TriggerPortCollection.RemovePort(key);
+            // Xóa triệt để các trigger động cũ (quét brute-force để tránh lỗi orphaned keys khi recompile/reload)
+            for (int g = 0; g < 20; g++) {
+                for (int i = 0; i < 200; i++) {
+                    var key = $"dynamic_wear_{g}_{i}";
+                    if (TriggerPortCollection.ContainsPort(key)) TriggerPortCollection.RemovePort(key);
                 }
+            }
+            for (int r = 0; r < 50; r++) {
+                var key = $"dynamic_rule_{r}";
+                if (TriggerPortCollection.ContainsPort(key)) TriggerPortCollection.RemovePort(key);
+            }
+            for (int p = 0; p < 50; p++) {
+                var key = $"dynamic_preset_{p}";
+                if (TriggerPortCollection.ContainsPort(key)) TriggerPortCollection.RemovePort(key);
             }
             _dynamicTriggerKeys.Clear();
 
