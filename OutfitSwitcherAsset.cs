@@ -260,23 +260,20 @@ namespace Warudo.Plugins.McpBridge {
             ValidateConfiguration();
         }
 
-        [Trigger]
-        [Label("SUGGEST FOLDERS")]
-        [Description("Tìm các folder có tên thường dùng như Outfit, Clothes, Hair, Accessories để hỗ trợ thiết lập ban đầu.")]
-        public void SuggestFolders() {
+        /// <summary>
+        /// Danh sách folder thực tế trên character cho autocomplete FOLDER PATH.
+        /// Chỉ lấy Transform có child vì mỗi child trực tiếp sẽ trở thành item.
+        /// </summary>
+        public string[] GetFolderPaths() {
             var root = Character?.GameObject?.transform;
-            if (root == null) {
-                ReportError("Character chưa được gán hoặc chưa load.");
-                return;
-            }
-            var keywords = new[] { "outfit", "clothes", "cloth", "hair", "accessories", "accessory", "costume" };
-            var suggestions = EnumerateDescendants(root)
-                .Where(transform => transform.childCount > 0 && keywords.Any(keyword =>
-                    transform.name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0))
-                .Select(transform => GetRelativePath(root, transform)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-            UpdateStatus(suggestions.Length == 0
-                ? "No common outfit folders detected. Use a full avatar-relative path."
-                : "Suggested folders:\n- " + string.Join("\n- ", suggestions));
+            if (root == null) return Array.Empty<string>();
+            return EnumerateDescendants(root)
+                .Where(transform => transform.childCount > 0)
+                .Select(transform => GetRelativePath(root, transform))
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
         }
 
         [Trigger]

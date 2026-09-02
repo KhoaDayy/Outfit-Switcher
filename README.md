@@ -9,7 +9,7 @@ Hệ thống quản lý outfit, tóc và phụ kiện tháo rời cho **Warudo**
 - `Toggle`: nhiều phụ kiện có thể active đồng thời.
 - Nút `WEAR / TOGGLE`, `ENABLE`, `DISABLE` và `PREVIEW INFO` trên từng item.
 - Scan một group hoặc `SCAN ALL GROUPS`.
-- `SUGGEST FOLDERS` hỗ trợ tìm nhanh folder Outfit, Clothes, Hair và Accessories.
+- `FOLDER PATH` có autocomplete trực tiếp từ hierarchy của Character, không cần nhớ hoặc gõ path thủ công.
 - `VALIDATE CONFIGURATION` phát hiện group trùng tên, path trùng hoặc không resolve được.
 - Blueprint autocomplete cho group, item và preset.
 - Blueprint có flow `Success`, `Failed`, output `Last Error`, đồng thời giữ `Exit` để tương thích graph cũ.
@@ -44,18 +44,17 @@ Khi phát hành bằng Warudo Mod SDK, `OutfitSwitcherPlugin.cs` là plugin entr
 ## Thiết lập nhanh
 
 1. Chọn `Character`.
-2. Bấm `SUGGEST FOLDERS` nếu chưa biết hierarchy path.
-3. Thêm group trong `Groups`.
-4. Chọn scan mode:
-   - `Avatar Folder`: mỗi child trực tiếp của folder là một item.
+2. Thêm group trong `Groups`.
+3. Chọn scan mode:
+   - `Avatar Folder`: chọn `Folder Path` từ dropdown hierarchy; mỗi child trực tiếp của folder là một item.
    - `Manual Paths`: nhập từng avatar-relative path.
-5. Chọn group type:
+4. Chọn group type:
    - `Switch`: outfit, tóc hoặc các lựa chọn loại trừ nhau.
    - `Toggle`: kính, mũ, áo khoác, tai, đuôi hoặc phụ kiện tháo rời.
-6. Bấm `SCAN ITEMS` hoặc `SCAN ALL GROUPS`.
-7. Bấm `VALIDATE CONFIGURATION`.
-8. Mở `Items` và dùng các nút trên từng item.
-9. Lưu Scene thủ công sau khi cấu hình vì Warudo không tự lưu scene.
+5. Bấm `SCAN ITEMS` hoặc `SCAN ALL GROUPS`.
+6. Bấm `VALIDATE CONFIGURATION`.
+7. Mở `Items` và dùng các nút trên từng item.
+8. Lưu Scene thủ công sau khi cấu hình vì Warudo không tự lưu scene.
 
 ## Cấu hình outfit và phụ kiện tháo rời
 
@@ -216,8 +215,8 @@ Các lỗi phổ biến:
 
 ### Folder hoặc item không tìm thấy
 
-- Dùng path tương đối từ root avatar.
-- Bấm `SUGGEST FOLDERS`.
+- Chọn lại path từ dropdown `Folder Path`, danh sách được lấy trực tiếp từ hierarchy của Character.
+- Có thể gõ path tương đối từ root avatar cho cấu trúc đặc biệt.
 - Nếu có nhiều object cùng leaf name, phải dùng full path. Plugin không còn tự chọn object đầu tiên.
 
 ### Glow làm hiện phụ kiện đã tắt
