@@ -1139,7 +1139,7 @@ namespace Warudo.Plugins.McpBridge {
                             swapPaths: pathsArray,
                             glowKey: "rule:" + rule.RuleName,
                             debugLog: DebugLogs,
-                            ignoreInactiveRenderers: true
+                            ignoreInactiveRenderers: false
                         ).Forget();
                     } else {
                         // Tắt: Glow đồ đang hiện, tại peak ẩn đi và fade glow tan dần
