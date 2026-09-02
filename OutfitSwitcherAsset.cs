@@ -1402,6 +1402,21 @@ namespace Warudo.Plugins.McpBridge {
                 }
 
                 if (targetPaths.Count > 0) {
+                    // Kiểm tra xem có thực sự cần đổi trạng thái không (tránh glow khi đã ở đúng trạng thái)
+                    bool needsChange = false;
+                    foreach (var path in targetPaths) {
+                        var go = FindByPath(root, path);
+                        if (go != null && go.gameObject.activeSelf != visible) {
+                            needsChange = true;
+                            break;
+                        }
+                    }
+
+                    if (!needsChange) {
+                        UpdateStatus($"**{rule.RuleName}**: already {(visible ? "shown" : "hidden")}, skipped");
+                        return;
+                    }
+
                     var pathsArray = targetPaths.ToArray();
                     if (visible) {
                         // Bật: Glow tại peak rồi hiện và fade glow
@@ -1422,13 +1437,25 @@ namespace Warudo.Plugins.McpBridge {
                             ignoreInactiveRenderers: false
                         ).Forget();
                     } else {
-                        // Tắt: Người dùng yêu cầu KHÔNG glow khi tắt, chỉ instant disable
-                        rule.SetDataInput(nameof(OutfitChildVisibilityRule.Visible), false, broadcast: true);
-                        ApplyChildVisibilityRule(rule);
-                        UpdateStatus($"**{rule.RuleName}**: hidden (Instant)");
-                        return;
+                        // Tắt: Glow đồ đang hiện, tại peak ẩn đi và fade glow tan dần
+                        GlowOutfitNode.Glow(
+                            Character,
+                            pathsArray,
+                            rule.GlowColor,
+                            rule.Intensity,
+                            rule.DurationMs,
+                            rule.PeakPercent,
+                            onPeak: () => {
+                                rule.SetDataInput(nameof(OutfitChildVisibilityRule.Visible), false, broadcast: true);
+                                ApplyChildVisibilityRule(rule);
+                            },
+                            swapPaths: null,
+                            glowKey: "rule:" + rule.RuleName,
+                            debugLog: DebugLogs,
+                            ignoreInactiveRenderers: false
+                        ).Forget();
                     }
-                    UpdateStatus($"**{rule.RuleName}**: shown (Glow)");
+                    UpdateStatus($"**{rule.RuleName}**: {(visible ? "shown" : "hidden")} (Glow)");
                     return;
                 }
             }
