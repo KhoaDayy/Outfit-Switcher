@@ -34,7 +34,7 @@ namespace Warudo.Plugins.McpBridge {
     )]
     public class OutfitSwitcherAsset : Asset {
 
-        [Section("1. Setup", 0)]
+        [Section("Setup", 0)]
         [DataInput]
         [Label("Character")]
         public CharacterAsset Character;
@@ -88,15 +88,30 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         private async UniTaskVoid SaveProfileModal() {
-            var defaultName = Character?.Name ?? "Default";
-            var result = await Context.Service.PromptStructuredDataInput<SaveOutfitProfileData>(
-                "Save Outfit Profile",
-                data => {
-                    data.ProfileName = defaultName;
+            try {
+                if (Context.StructuredDataTypeRegistry != null && !Context.StructuredDataTypeRegistry.IsTypeRegistered(typeof(SaveOutfitProfileData))) {
+                    Context.StructuredDataTypeRegistry.RegisterType(typeof(SaveOutfitProfileData));
                 }
-            );
-            if (result == null || string.IsNullOrWhiteSpace(result.ProfileName)) return;
-            SaveProfile(result.ProfileName);
+                var defaultName = Character?.Name ?? "Default";
+                var result = await Context.Service.PromptStructuredDataInput<SaveOutfitProfileData>(
+                    "Save Outfit Profile",
+                    data => {
+                        data.ProfileName = defaultName;
+                    }
+                );
+                if (result == null) {
+                    Debug.LogWarning("[OutfitSwitcher] Save profile modal cancelled.");
+                    return;
+                }
+                var profileName = !string.IsNullOrWhiteSpace(result.ProfileName) ? result.ProfileName : result.GetDataInput<string>(nameof(SaveOutfitProfileData.ProfileName));
+                if (string.IsNullOrWhiteSpace(profileName)) {
+                    profileName = defaultName;
+                }
+                SaveProfile(profileName);
+            } catch (Exception ex) {
+                ReportError("Lỗi khi mở modal lưu profile: " + ex.Message);
+                Debug.LogException(ex);
+            }
         }
 
         public void TriggerLoadProfile() {
@@ -104,14 +119,30 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         private async UniTaskVoid LoadProfileModal() {
-            var result = await Context.Service.PromptStructuredDataInput<LoadOutfitProfileData>(
-                "Load Outfit Profile",
-                data => {
-                    data.ProfileName = "";
+            try {
+                if (Context.StructuredDataTypeRegistry != null && !Context.StructuredDataTypeRegistry.IsTypeRegistered(typeof(LoadOutfitProfileData))) {
+                    Context.StructuredDataTypeRegistry.RegisterType(typeof(LoadOutfitProfileData));
                 }
-            );
-            if (result == null || string.IsNullOrWhiteSpace(result.ProfileName)) return;
-            LoadProfile(result.ProfileName);
+                var result = await Context.Service.PromptStructuredDataInput<LoadOutfitProfileData>(
+                    "Load Outfit Profile",
+                    data => {
+                        data.ProfileName = "";
+                    }
+                );
+                if (result == null) {
+                    Debug.LogWarning("[OutfitSwitcher] Load profile modal cancelled.");
+                    return;
+                }
+                var profileName = !string.IsNullOrWhiteSpace(result.ProfileName) ? result.ProfileName : result.GetDataInput<string>(nameof(LoadOutfitProfileData.ProfileName));
+                if (string.IsNullOrWhiteSpace(profileName)) {
+                    ReportError("Vui lòng chọn Profile Name cần nạp.");
+                    return;
+                }
+                LoadProfile(profileName);
+            } catch (Exception ex) {
+                ReportError("Lỗi khi mở modal nạp profile: " + ex.Message);
+                Debug.LogException(ex);
+            }
         }
 
         public void OpenProfilesFolder() {
@@ -133,6 +164,7 @@ namespace Warudo.Plugins.McpBridge {
                 var folder = GetProfilesFolder();
                 if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 var safeName = SanitizeFileName(profileName);
+                if (string.IsNullOrWhiteSpace(safeName)) safeName = "Default";
                 var filePath = Path.Combine(folder, $"{safeName}.json");
 
                 var data = new OutfitSwitcherBackupData {
@@ -151,8 +183,10 @@ namespace Warudo.Plugins.McpBridge {
                 var json = JsonConvert.SerializeObject(data, settings);
                 File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
                 UpdateStatus($"Đã lưu outfit profile **{safeName}**!");
+                Debug.Log($"[OutfitSwitcher] Successfully saved profile '{safeName}' to: {filePath}");
             } catch (Exception ex) {
                 ReportError("Lưu profile thất bại: " + ex.Message);
+                Debug.LogException(ex);
             }
         }
 
@@ -214,6 +248,18 @@ namespace Warudo.Plugins.McpBridge {
         // ═══════════════════════════════════════════════════════
         protected override void OnCreate() {
             base.OnCreate();
+            try {
+                if (Context.StructuredDataTypeRegistry != null) {
+                    if (!Context.StructuredDataTypeRegistry.IsTypeRegistered(typeof(SaveOutfitProfileData))) {
+                        Context.StructuredDataTypeRegistry.RegisterType(typeof(SaveOutfitProfileData));
+                    }
+                    if (!Context.StructuredDataTypeRegistry.IsTypeRegistered(typeof(LoadOutfitProfileData))) {
+                        Context.StructuredDataTypeRegistry.RegisterType(typeof(LoadOutfitProfileData));
+                    }
+                }
+            } catch (Exception ex) {
+                Debug.LogWarning("[OutfitSwitcher] Error registering StructuredData: " + ex.Message);
+            }
             Watch<CharacterAsset>(nameof(Character), (from, to) => OnCharacterChanged(from, to));
             WatchAll(new[] { nameof(Groups), nameof(ChildVisibilityRules), nameof(Presets) }, LinkRuntimeData);
             LinkRuntimeData();
