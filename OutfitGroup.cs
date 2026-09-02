@@ -246,12 +246,6 @@ namespace Warudo.Plugins.McpBridge {
         [HiddenIf(nameof(IsInstantTransition))]
         public string[] GlowExcludedPaths = Array.Empty<string>();
 
-        [DataInput]
-        [Label("ALLOW NONE")]
-        [Description("Cho phép tắt toàn bộ item trong group Switch bằng nút DISABLE ALL.")]
-        [HiddenIf(nameof(IsToggleGroup))]
-        public bool AllowNone = false;
-
         // Legacy fields kept for backward-compatible scene migration.
         [DataInput]
         [Hidden]
@@ -262,7 +256,6 @@ namespace Warudo.Plugins.McpBridge {
         public string LastActivePath = "";
 
         // Nhận diện character đã scan — chặn restore/apply nhầm lên avatar khác
-        // (path scan từ avatar cũ có thể khớp nhầm object trùng tên trên avatar mới).
         [DataInput]
         [Hidden]
         public string ScannedCharacterId = "";
@@ -275,8 +268,6 @@ namespace Warudo.Plugins.McpBridge {
         [Hidden]
         public string[] LastActivePaths = Array.Empty<string>();
 
-        // Hiển thị danh sách item sau scan — mỗi item có NAME, PATH và nút
-        // 👗 WEAR riêng (dynamic trigger đúng nghĩa, không giới hạn số lượng).
         [DataInput]
         [Label("ITEMS")]
         [Description("Danh sách item đã scan. Bấm 👗 WEAR trên từng item để đổi đồ.")]
@@ -293,13 +284,6 @@ namespace Warudo.Plugins.McpBridge {
         [Description("Quét danh sách outfit theo folder/manual paths")]
         public void ScanItems() {
             OwnerAsset?.ScanGroup(this);
-        }
-
-        [Trigger]
-        [Label("DISABLE ALL")]
-        [Description("Tắt toàn bộ item. Group Switch chỉ thực hiện khi ALLOW NONE được bật.")]
-        public void DisableAll() {
-            OwnerAsset?.DisableAllItems(GroupIndex);
         }
 
         // ── HiddenIf conditions ──
