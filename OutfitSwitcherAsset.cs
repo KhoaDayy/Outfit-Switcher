@@ -1422,30 +1422,16 @@ namespace Warudo.Plugins.McpBridge {
                             ignoreInactiveRenderers: false
                         ).Forget();
                     } else {
-                        // Tắt: Glow đồ đang hiện, tại peak ẩn đi và fade glow tan dần
-                        GlowOutfitNode.Glow(
-                            Character,
-                            pathsArray,
-                            rule.GlowColor,
-                            rule.Intensity,
-                            rule.DurationMs,
-                            rule.PeakPercent,
-                            onPeak: () => {
-                                rule.SetDataInput(nameof(OutfitChildVisibilityRule.Visible), false, broadcast: true);
-                                ApplyChildVisibilityRule(rule);
-                            },
-                            swapPaths: null,
-                            glowKey: "rule:" + rule.RuleName,
-                            debugLog: DebugLogs,
-                            ignoreInactiveRenderers: false
-                        ).Forget();
+                        // Tắt: Người dùng yêu cầu KHÔNG glow khi tắt, chỉ instant disable
+                        rule.SetDataInput(nameof(OutfitChildVisibilityRule.Visible), false, broadcast: true);
+                        ApplyChildVisibilityRule(rule);
+                        UpdateStatus($"**{rule.RuleName}**: hidden (Instant)");
+                        return;
                     }
-                    UpdateStatus($"**{rule.RuleName}**: {(visible ? "shown" : "hidden")} (Glow)");
+                    UpdateStatus($"**{rule.RuleName}**: shown (Glow)");
                     return;
                 }
             }
-
-            // Instant fallback
             rule.SetDataInput(nameof(OutfitChildVisibilityRule.Visible), visible, broadcast: true);
             ApplyChildVisibilityRule(rule);
             UpdateStatus($"**{rule.RuleName}**: {(visible ? "shown" : "hidden")}");
