@@ -58,7 +58,7 @@ namespace Warudo.Plugins.McpBridge {
 
         [Markdown(Primary = true)]
         [DataInput]
-        public string Status = "➕ Thêm group rồi bấm **Scan Items** để bắt đầu.";
+        public string Status = "Thêm group rồi bấm **Scan Items** để bắt đầu.";
 
         // ═══════════════════════════════════════════════════════
         // LIFECYCLE
@@ -115,11 +115,11 @@ namespace Warudo.Plugins.McpBridge {
         private void OnCharacterChanged(CharacterAsset previous, CharacterAsset current) {
             if (previous != null && previous != current) GlowOutfitNode.CancelAll(previous);
             if (Character?.GameObject == null) {
-                UpdateStatus("⚠️ Chưa chọn Character hoặc Character chưa load.");
+                UpdateStatus("Chưa chọn Character hoặc Character chưa load.");
                 RebuildDynamicTriggers();
                 return;
             }
-            UpdateStatus($"✅ Character: **{Character.Name}** — bấm Scan Items trên mỗi group.");
+            UpdateStatus($"Character: **{Character.Name}** — bấm Scan Items trên mỗi group.");
 
             // Auto-restore last active items khi đổi character
             foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
@@ -145,7 +145,7 @@ namespace Warudo.Plugins.McpBridge {
         /// </summary>
         public void ScanGroup(OutfitGroup group) {
             if (Character?.GameObject == null) {
-                UpdateStatus("⚠️ Chưa chọn Character!");
+                UpdateStatus("Chưa chọn Character!");
                 return;
             }
 
@@ -282,9 +282,9 @@ namespace Warudo.Plugins.McpBridge {
 
                             var isFirstInGroup = (i == 0);
                             var port = new TriggerPort(itemKey, () => WearItemByPath(capturedG, capturedPath), new TriggerProperties {
-                                label = $"👗 {itemName}",
+                                label = itemName,
                                 description = item.Path,
-                                sectionTitle = isFirstInGroup ? $"👗 {groupName.ToUpper()}" : null,
+                                sectionTitle = isFirstInGroup ? groupName.ToUpper() : null,
                                 order = currentOrder++
                             });
                             TriggerPortCollection.AddPort(port);
@@ -305,9 +305,9 @@ namespace Warudo.Plugins.McpBridge {
                     var ruleKey = $"dynamic_rule_{r}";
 
                     var port = new TriggerPort(ruleKey, () => ToggleChildVisibilityRule(capturedR), new TriggerProperties {
-                        label = $"👁️ Toggle {ruleName}",
+                        label = $"Toggle {ruleName}",
                         description = $"Bật/tắt {ruleName}",
-                        sectionTitle = (r == 0) ? "👁️ CHILD VISIBILITY" : null,
+                        sectionTitle = (r == 0) ? "CHILD VISIBILITY" : null,
                         order = currentOrder++
                     });
                     TriggerPortCollection.AddPort(port);
@@ -326,9 +326,9 @@ namespace Warudo.Plugins.McpBridge {
                     var presetKey = $"dynamic_preset_{p}";
 
                     var port = new TriggerPort(presetKey, () => ApplyPreset(capturedP), new TriggerProperties {
-                        label = $"⚡ {presetName}",
+                        label = presetName,
                         description = $"Áp dụng preset '{presetName}'",
-                        sectionTitle = (p == 0) ? "⚡ PRESETS" : null,
+                        sectionTitle = (p == 0) ? "PRESETS" : null,
                         order = currentOrder++
                     });
                     TriggerPortCollection.AddPort(port);
@@ -965,7 +965,7 @@ namespace Warudo.Plugins.McpBridge {
                 SaveGroupActiveState(group);
             }
 
-            UpdateStatus($"👗 Switched **{group.GroupName}** → **{targetItem.DisplayName}**");
+            UpdateStatus($"Switched **{group.GroupName}** → **{targetItem.DisplayName}**");
 
             if (DebugLogs)
                 Debug.Log($"[OutfitSwitcher] Switched to '{targetItem.DisplayName}' in group '{group.GroupName}' (deactivated {allOtherGos.Count} other items)");
@@ -1190,42 +1190,7 @@ namespace Warudo.Plugins.McpBridge {
             UpdateItemStates(group);
         }
 
-        // ═══════════════════════════════════════════════════════
-        // QUICK TRIGGERS — Next/Prev cho 3 group đầu (phím tắt tiện dụng).
-        // Việc WEAR từng item nằm ngay trên mỗi OutfitItem (nút 👗 WEAR),
-        // hiển thị đúng tên đồ và KHÔNG giới hạn số group / số item.
-        // Group thứ 4 trở đi vẫn điều khiển đầy đủ qua Blueprint node.
-        // ═══════════════════════════════════════════════════════
 
-        [Trigger] [Label("G1: ⏭️ Next Item")] [HiddenIf(nameof(ShouldHideG1_Group))] public void G1_Next() => SwitchNextItem(0);
-        [Trigger] [Label("G1: ⏮️ Prev Item")] [HiddenIf(nameof(ShouldHideG1_Group))] public void G1_Prev() => SwitchPreviousItem(0);
-        [Trigger] [Label("G2: ⏭️ Next Item")] [HiddenIf(nameof(ShouldHideG2_Group))] public void G2_Next() => SwitchNextItem(1);
-        [Trigger] [Label("G2: ⏮️ Prev Item")] [HiddenIf(nameof(ShouldHideG2_Group))] public void G2_Prev() => SwitchPreviousItem(1);
-        [Trigger] [Label("G3: ⏭️ Next Item")] [HiddenIf(nameof(ShouldHideG3_Group))] public void G3_Next() => SwitchNextItem(2);
-        [Trigger] [Label("G3: ⏮️ Prev Item")] [HiddenIf(nameof(ShouldHideG3_Group))] public void G3_Prev() => SwitchPreviousItem(2);
-
-        // ── Trigger helper ──
-
-        private void WearByIndex(int groupIndex, int itemIndex) {
-            if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) return;
-            var group = Groups[groupIndex];
-            if (group?.Items == null || itemIndex < 0 || itemIndex >= group.Items.Length) return;
-            var item = group.Items[itemIndex];
-            if (item == null) return;
-            // Dùng Path (unique sau scan) — DisplayName có thể trùng giữa các item
-            WearItemByPath(groupIndex, item.Path);
-        }
-
-        // ── HiddenIf conditions — ẩn triggers khi group chưa có items ──
-        protected bool ShouldHideG1_Group() => !HasGroup(0);
-        protected bool ShouldHideG2_Group() => !HasGroup(1);
-        protected bool ShouldHideG3_Group() => !HasGroup(2);
-
-        private bool HasGroup(int groupIndex) {
-            if (Groups == null || groupIndex >= Groups.Length) return false;
-            var g = Groups[groupIndex];
-            return g != null && g.Items != null && g.Items.Length > 0;
-        }
 
         // ═══════════════════════════════════════════════════════
         // HELPERS

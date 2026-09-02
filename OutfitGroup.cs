@@ -79,7 +79,7 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         [Trigger]
-        [Label("👗 WEAR")]
+        [Label("WEAR")]
         [Description("Mặc / bật tắt item")]
         public void Wear() {
             OwnerAsset?.WearItemByPath(GroupIndex, Path);
