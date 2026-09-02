@@ -103,6 +103,16 @@ namespace Warudo.Plugins.McpBridge {
             return UniTask.FromResult(AutoCompleteList.Single(files));
         }
 
+        private class BackupContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver {
+            protected override System.Collections.Generic.IList<Newtonsoft.Json.Serialization.JsonProperty> CreateProperties(Type type, Newtonsoft.Json.MemberSerialization memberSerialization) {
+                var props = base.CreateProperties(type, memberSerialization);
+                return props.Where(p => 
+                    type == typeof(OutfitSwitcherBackupData) || 
+                    p.AttributeProvider.GetAttributes(typeof(DataInputAttribute), true).Count > 0
+                ).ToList();
+            }
+        }
+
         [Trigger]
         [Label("Save Outfit Profile")]
         [Description("Lưu cấu hình hiện tại thành file profile theo Profile Name ở trên.")]
@@ -126,7 +136,8 @@ namespace Warudo.Plugins.McpBridge {
                 var settings = new JsonSerializerSettings {
                     Formatting = Formatting.Indented,
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                    NullValueHandling = NullValueHandling.Ignore
+                    NullValueHandling = NullValueHandling.Ignore,
+                    ContractResolver = new BackupContractResolver()
                 };
                 var json = JsonConvert.SerializeObject(data, settings);
                 File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
@@ -157,7 +168,8 @@ namespace Warudo.Plugins.McpBridge {
                 }
                 var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
                 var settings = new JsonSerializerSettings {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    ContractResolver = new BackupContractResolver()
                 };
                 var data = JsonConvert.DeserializeObject<OutfitSwitcherBackupData>(json, settings);
                 if (data == null) {
