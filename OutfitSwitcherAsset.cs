@@ -103,14 +103,95 @@ namespace Warudo.Plugins.McpBridge {
             return UniTask.FromResult(AutoCompleteList.Single(files));
         }
 
+        private class WarudoValueProvider : Newtonsoft.Json.Serialization.IValueProvider {
+            private readonly System.Reflection.PropertyInfo _pi;
+            private readonly System.Reflection.FieldInfo _fi;
+            private readonly string _name;
+
+            public WarudoValueProvider(System.Reflection.MemberInfo member) {
+                _name = member.Name;
+                if (member is System.Reflection.PropertyInfo pi) _pi = pi;
+                else if (member is System.Reflection.FieldInfo fi) _fi = fi;
+            }
+
+            public void SetValue(object target, object value) {
+                if (target is StructuredData sd) {
+                    try {
+                        sd.SetDataInput(_name, value);
+                        return;
+                    } catch {
+                        // Fallback to direct set if SetDataInput fails (e.g. not a DataInput port)
+                    }
+                }
+                
+                if (_pi != null && _pi.CanWrite) _pi.SetValue(target, value);
+                else if (_fi != null) _fi.SetValue(target, value);
+            }
+
+            public object GetValue(object target) {
+                if (_pi != null) return _pi.GetValue(target);
+                if (_fi != null) return _fi.GetValue(target);
+                return null;
+            }
+        }
+
         private class BackupContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver {
+            protected override Newtonsoft.Json.Serialization.JsonContract CreateContract(Type objectType) {
+                if (typeof(StructuredData).IsAssignableFrom(objectType)) {
+                    return CreateObjectContract(objectType);
+                }
+                return base.CreateContract(objectType);
+            }
+
             protected override System.Collections.Generic.IList<Newtonsoft.Json.Serialization.JsonProperty> CreateProperties(Type type, Newtonsoft.Json.MemberSerialization memberSerialization) {
                 var props = base.CreateProperties(type, memberSerialization);
-                return props.Where(p => 
-                    type == typeof(OutfitSwitcherBackupData) || 
-                    p.AttributeProvider.GetAttributes(typeof(DataInputAttribute), true).Count > 0
-                ).ToList();
+                foreach (var p in props) {
+                    if (type == typeof(OutfitSwitcherBackupData) || p.AttributeProvider.GetAttributes(typeof(DataInputAttribute), true).Count > 0) {
+                        if (typeof(StructuredData).IsAssignableFrom(type) && p.UnderlyingName != null) {
+                            var member = type.GetMember(p.UnderlyingName).FirstOrDefault();
+                            if (member != null) {
+                                p.ValueProvider = new WarudoValueProvider(member);
+                            }
+                        }
+                    } else {
+                        p.Ignored = true;
+                    }
+                }
+                return props;
             }
+        }
+
+        private class StructuredDataConverter : Newtonsoft.Json.JsonConverter {
+            public override bool CanConvert(Type objectType) {
+                return typeof(StructuredData).IsAssignableFrom(objectType);
+            }
+
+            public override object ReadJson(Newtonsoft.Json.JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer) {
+                if (reader.TokenType == Newtonsoft.Json.JsonToken.Null) return null;
+                
+                try {
+                    var method = typeof(StructuredData).GetMethod("Create", Type.EmptyTypes);
+                    if (method != null) {
+                        var generic = method.MakeGenericMethod(objectType);
+                        var instance = generic.Invoke(null, null);
+                        serializer.Populate(reader, instance);
+                        return instance;
+                    }
+                } catch (Exception ex) {
+                    Debug.LogWarning($"[OutfitSwitcher] Failed to use StructuredData.Create for {objectType.Name}: {ex.Message}. Falling back to default instantiation.");
+                }
+
+                // Fallback (might cause UI issues in Warudo, but prevents total failure)
+                var fallbackInstance = Activator.CreateInstance(objectType);
+                serializer.Populate(reader, fallbackInstance);
+                return fallbackInstance;
+            }
+
+            public override void WriteJson(Newtonsoft.Json.JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer) {
+                throw new NotImplementedException();
+            }
+            
+            public override bool CanWrite => false;
         }
 
         [Trigger]
@@ -169,7 +250,8 @@ namespace Warudo.Plugins.McpBridge {
                 var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
                 var settings = new JsonSerializerSettings {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                    ContractResolver = new BackupContractResolver()
+                    ContractResolver = new BackupContractResolver(),
+                    Converters = new List<Newtonsoft.Json.JsonConverter> { new StructuredDataConverter() }
                 };
                 var data = JsonConvert.DeserializeObject<OutfitSwitcherBackupData>(json, settings);
                 if (data == null) {
