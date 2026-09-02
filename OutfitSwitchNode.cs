@@ -61,20 +61,20 @@ namespace Warudo.Plugins.McpBridge.Nodes {
 
         [DataInput]
         [Label("GROUP")]
-        [AutoCompleteList(nameof(AutoCompleteGroupName), forceSelection: true)]
+        [AutoComplete(nameof(AutoCompleteGroupName), forceSelection: true)]
         [HiddenIf(nameof(IsPresetAction))]
         public string GroupName = "Outfit";
 
         [DataInput]
         [Label("ITEM")]
         [Description("Danh sách hiển thị tên và path; giá trị lưu là path ổn định.")]
-        [AutoCompleteList(nameof(AutoCompleteItem), forceSelection: true)]
+        [AutoComplete(nameof(AutoCompleteItem), forceSelection: true)]
         [HiddenIf(nameof(ShouldHideItem))]
         public string ItemName = "";
 
         [DataInput]
         [Label("PRESET")]
-        [AutoCompleteList(nameof(AutoCompletePreset), forceSelection: true)]
+        [AutoComplete(nameof(AutoCompletePreset), forceSelection: true)]
         [HiddenIf(nameof(IsNotPresetAction))]
         public string PresetName = "";
 
@@ -88,13 +88,13 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                                            Action != OutfitSwitchAction.EnableItem &&
                                            Action != OutfitSwitchAction.DisableItem;
 
-        protected async UniTask<AutoCompleteList> AutoCompleteGroupName() {
+        protected UniTask<AutoCompleteList> AutoCompleteGroupName() {
             var entries = (Switcher?.GetGroupNames() ?? Array.Empty<string>())
                 .Select(name => new AutoCompleteEntry { label = name, value = name }).ToList();
-            return AutoCompleteList.Single(entries);
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
         }
 
-        protected async UniTask<AutoCompleteList> AutoCompleteItem() {
+        protected UniTask<AutoCompleteList> AutoCompleteItem() {
             var entries = (Switcher?.GetItems(GroupName) ?? Array.Empty<OutfitItem>())
                 .Where(item => item != null)
                 .Select(item => new AutoCompleteEntry {
@@ -103,13 +103,13 @@ namespace Warudo.Plugins.McpBridge.Nodes {
                         : $"{item.DisplayName} — {item.Path}",
                     value = item.Path
                 }).ToList();
-            return AutoCompleteList.Single(entries);
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
         }
 
-        protected async UniTask<AutoCompleteList> AutoCompletePreset() {
+        protected UniTask<AutoCompleteList> AutoCompletePreset() {
             var entries = (Switcher?.GetPresetNames() ?? Array.Empty<string>())
                 .Select(name => new AutoCompleteEntry { label = name, value = name }).ToList();
-            return AutoCompleteList.Single(entries);
+            return UniTask.FromResult(AutoCompleteList.Single(entries));
         }
 
         [DataOutput]
