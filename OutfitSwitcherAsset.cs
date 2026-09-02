@@ -262,18 +262,53 @@ namespace Warudo.Plugins.McpBridge {
 
         /// <summary>
         /// Danh sách folder thực tế trên character cho autocomplete FOLDER PATH.
-        /// Chỉ lấy Transform có child vì mỗi child trực tiếp sẽ trở thành item.
+        /// Chỉ lấy Transform có child, bỏ qua nhánh Armature/bone để tránh rối UI.
         /// </summary>
         public string[] GetFolderPaths() {
             var root = Character?.GameObject?.transform;
             if (root == null) return Array.Empty<string>();
-            return EnumerateDescendants(root)
+            return EnumerateNonBoneDescendants(root, 0, 4)
                 .Where(transform => transform.childCount > 0)
                 .Select(transform => GetRelativePath(root, transform))
                 .Where(path => !string.IsNullOrWhiteSpace(path))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+        }
+
+        /// <summary>
+        /// Tên GameObject thường thuộc về skeleton/bone — bỏ qua toàn bộ nhánh con.
+        /// </summary>
+        private static readonly HashSet<string> BoneRootNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            "Armature", "Skeleton", "Root", "Hips", "Spine", "rig", "Bip001",
+            "mixamorig:Hips", "J_Bip_C_Hips", "J_Sec_L_Bust1", "J_Sec_R_Bust1"
+        };
+
+        /// <summary>
+        /// Duyệt cây con nhưng bỏ qua toàn bộ nhánh bone/armature.
+        /// maxDepth giới hạn độ sâu tránh quá nhiều node vô nghĩa.
+        /// </summary>
+        private static IEnumerable<Transform> EnumerateNonBoneDescendants(Transform parent, int depth, int maxDepth) {
+            if (parent == null || depth >= maxDepth) yield break;
+            foreach (Transform child in parent) {
+                if (IsBoneBranch(child)) continue;
+                yield return child;
+                foreach (var desc in EnumerateNonBoneDescendants(child, depth + 1, maxDepth))
+                    yield return desc;
+            }
+        }
+
+        /// <summary>
+        /// Nhận diện node là gốc nhánh bone — có tên trong blacklist HOẶC
+        /// tất cả children đều lại là bone (không có Renderer/mesh trực tiếp).
+        /// </summary>
+        private static bool IsBoneBranch(Transform t) {
+            if (BoneRootNames.Contains(t.name)) return true;
+            // Nếu tên chứa bone-related keywords phổ biến
+            var lower = t.name.ToLowerInvariant();
+            if (lower.Contains("armature") || lower.Contains("skeleton"))
+                return true;
+            return false;
         }
 
         [Trigger]
