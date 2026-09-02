@@ -91,16 +91,29 @@ namespace Warudo.Plugins.McpBridge {
         [Description("Cập nhật lại toàn bộ nút bấm và cấu hình")]
         public void RefreshSetup() {
             LinkRuntimeData();
+            bool hasError = false;
             if (Character?.GameObject != null) {
                 foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
                     if (group == null) continue;
+                    
+                    // Quét group, nếu không tìm thấy folder sẽ UpdateStatus lỗi
+                    var oldStatus = Status;
                     ScanGroup(group);
+                    if (Status != oldStatus && Status.Contains("❌")) {
+                        hasError = true;
+                    }
                     RestoreLastActiveItem(group);
                 }
                 ApplyChildVisibilityRules();
+            } else {
+                UpdateStatus("❌ Chưa chọn Character hoặc Character chưa tải xong.");
+                hasError = true;
             }
+            
             RebuildDynamicTriggers();
-            UpdateStatus("Đã cập nhật toàn bộ cấu hình.");
+            if (!hasError) {
+                UpdateStatus("✅ Đã cập nhật toàn bộ cấu hình và đẻ nút bấm.");
+            }
             Broadcast();
         }
 
