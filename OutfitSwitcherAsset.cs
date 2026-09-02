@@ -277,11 +277,12 @@ namespace Warudo.Plugins.McpBridge {
         }
 
         /// <summary>
-        /// Tên GameObject thường thuộc về skeleton/bone — bỏ qua toàn bộ nhánh con.
+        /// Tên GameObject thường là gốc skeleton — bỏ qua toàn bộ nhánh con.
+        /// Chỉ chứa tên chuyên biệt cho bone root, KHÔNG chứa tên chung như
+        /// "Root" (vì nhiều avatar dùng Root làm folder cha chứa outfit).
         /// </summary>
         private static readonly HashSet<string> BoneRootNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
-            "Armature", "Skeleton", "Root", "Hips", "Spine", "rig", "Bip001",
-            "mixamorig:Hips", "J_Bip_C_Hips", "J_Sec_L_Bust1", "J_Sec_R_Bust1"
+            "Armature", "Skeleton", "Bip001"
         };
 
         /// <summary>
