@@ -43,7 +43,7 @@ namespace Warudo.Plugins.McpBridge {
         [Label("Groups")]
         [Description("Danh sách nhóm trang phục/phụ kiện")]
         public OutfitGroup[] Groups = Array.Empty<OutfitGroup>();
-
+ 
         [DataInput]
         [Label("Child Visibility Rules")]
         [Description("Quy tắc ẩn/hiện part con (vd Tai, Đuôi)")]
@@ -109,12 +109,7 @@ namespace Warudo.Plugins.McpBridge {
                 };
                 var json = JsonConvert.SerializeObject(data, settings);
                 SetDataInput(nameof(ConfigJson), json, broadcast: true);
-                try {
-                    GUIUtility.systemCopyBuffer = json;
-                    UpdateStatus("Đã xuất cấu hình ra ô JSON và tự động copy vào Clipboard!");
-                } catch {
-                    UpdateStatus("Đã xuất cấu hình ra ô JSON bên dưới.");
-                }
+                UpdateStatus("Đã xuất cấu hình ra ô 'Config JSON' bên dưới!");
             } catch (Exception ex) {
                 ReportError("Export thất bại: " + ex.Message);
             }
