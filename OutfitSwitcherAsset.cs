@@ -60,6 +60,23 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         public string Status = "Thêm group rồi bấm **Scan Items** để bắt đầu.";
 
+        [Trigger]
+        [Label("Refresh Setup")]
+        [Description("Cập nhật lại toàn bộ nút bấm và cấu hình")]
+        public void RefreshSetup() {
+            LinkRuntimeData();
+            if (Character?.GameObject != null) {
+                foreach (var group in Groups ?? Array.Empty<OutfitGroup>()) {
+                    if (group == null) continue;
+                    RestoreLastActiveItem(group);
+                }
+                ApplyChildVisibilityRules();
+            }
+            RebuildDynamicTriggers();
+            UpdateStatus("Đã cập nhật toàn bộ cấu hình.");
+            Broadcast();
+        }
+
         // ═══════════════════════════════════════════════════════
         // LIFECYCLE
         // ═══════════════════════════════════════════════════════
