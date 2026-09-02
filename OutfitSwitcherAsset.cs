@@ -62,7 +62,6 @@ namespace Warudo.Plugins.McpBridge {
         [DataInput]
         public string Status = "Thêm group rồi bấm **Scan Items** để bắt đầu.";
 
-        [Section("Setup")]
         [Trigger]
         [Label("Refresh Setup")]
         [Description("Cập nhật lại toàn bộ nút bấm và cấu hình")]
@@ -80,7 +79,11 @@ namespace Warudo.Plugins.McpBridge {
             Broadcast();
         }
 
-        [Section("Setup")]
+        // ═══════════════════════════════════════════════════════
+        // OUTFIT PROFILES (SAVE / LOAD / SHARE)
+        // ═══════════════════════════════════════════════════════
+
+        [Section("Profiles", 10)]
         [DataInput]
         [Label("Profile Name")]
         [Description("Tên profile (chọn từ dropdown hoặc nhập tên mới để lưu)")]
@@ -99,7 +102,6 @@ namespace Warudo.Plugins.McpBridge {
             return UniTask.FromResult(AutoCompleteList.Single(files));
         }
 
-        [Section("Setup")]
         [Trigger]
         [Label("Save Outfit Profile")]
         [Description("Lưu cấu hình hiện tại thành file profile theo Profile Name ở trên.")]
@@ -135,7 +137,6 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
-        [Section("Setup")]
         [Trigger]
         [Label("Load Outfit Profile")]
         [Description("Nạp profile đã chọn ở Profile Name và áp dụng vào avatar.")]
@@ -187,7 +188,6 @@ namespace Warudo.Plugins.McpBridge {
             }
         }
 
-        [Section("Setup")]
         [Trigger]
         [Label("Open Outfit Profiles Folder")]
         [Description("Mở thư mục chứa các file Profile trong File Explorer.")]
@@ -424,26 +424,26 @@ namespace Warudo.Plugins.McpBridge {
             }
             _dynamicTriggerKeys.Clear();
 
-            // Đảm bảo toàn bộ nút tĩnh thuộc section Setup với thứ tự cố định ở đầu
-            if (TriggerPortCollection.ContainsPort(nameof(SaveProfile))) {
-                var port = TriggerPortCollection.GetPort(nameof(SaveProfile));
-                port.Properties.sectionTitle = "Setup";
-                port.Properties.order = 1f;
-            }
-            if (TriggerPortCollection.ContainsPort(nameof(LoadProfile))) {
-                var port = TriggerPortCollection.GetPort(nameof(LoadProfile));
-                port.Properties.sectionTitle = "Setup";
-                port.Properties.order = 2f;
-            }
-            if (TriggerPortCollection.ContainsPort(nameof(OpenProfilesFolder))) {
-                var port = TriggerPortCollection.GetPort(nameof(OpenProfilesFolder));
-                port.Properties.sectionTitle = "Setup";
-                port.Properties.order = 3f;
-            }
+            // Sắp xếp lại thứ tự các nút tĩnh cho chuẩn UI
             if (TriggerPortCollection.ContainsPort(nameof(RefreshSetup))) {
                 var port = TriggerPortCollection.GetPort(nameof(RefreshSetup));
                 port.Properties.sectionTitle = "Setup";
-                port.Properties.order = 4f;
+                port.Properties.order = 9f;
+            }
+            if (TriggerPortCollection.ContainsPort(nameof(SaveProfile))) {
+                var port = TriggerPortCollection.GetPort(nameof(SaveProfile));
+                port.Properties.sectionTitle = "Profiles";
+                port.Properties.order = 11f;
+            }
+            if (TriggerPortCollection.ContainsPort(nameof(LoadProfile))) {
+                var port = TriggerPortCollection.GetPort(nameof(LoadProfile));
+                port.Properties.sectionTitle = "Profiles";
+                port.Properties.order = 12f;
+            }
+            if (TriggerPortCollection.ContainsPort(nameof(OpenProfilesFolder))) {
+                var port = TriggerPortCollection.GetPort(nameof(OpenProfilesFolder));
+                port.Properties.sectionTitle = "Profiles";
+                port.Properties.order = 13f;
             }
 
             float currentOrder = 100f;
