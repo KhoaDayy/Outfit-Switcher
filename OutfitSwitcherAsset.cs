@@ -397,10 +397,7 @@ namespace Warudo.Plugins.McpBridge {
                     if (entry.Action == OutfitPresetAction.Toggle && group.GroupType != OutfitGroupType.Toggle) {
                         errors.Add($"Preset '{preset.PresetName}': Toggle chỉ dùng cho Toggle group '{group.GroupName}'");
                     }
-                    if (entry.Action == OutfitPresetAction.Disable &&
-                        group.GroupType == OutfitGroupType.Single && !group.AllowNone) {
-                        errors.Add($"Preset '{preset.PresetName}': group '{group.GroupName}' cần ALLOW NONE để Disable");
-                    }
+
                 }
             }
         }
@@ -550,10 +547,7 @@ namespace Warudo.Plugins.McpBridge {
                 error = $"Không resolve được path '{item.Path}'.";
                 return false;
             }
-            if (!active && group.GroupType == OutfitGroupType.Single && !group.AllowNone) {
-                error = $"Group '{group.GroupName}' chưa bật ALLOW NONE.";
-                return false;
-            }
+
             target.gameObject.SetActive(active);
             ApplyChildVisibilityRules();
             UpdateItemStates(group);
@@ -566,10 +560,7 @@ namespace Warudo.Plugins.McpBridge {
             if (Groups == null || groupIndex < 0 || groupIndex >= Groups.Length) return;
             var group = Groups[groupIndex];
             if (group == null) return;
-            if (group.GroupType == OutfitGroupType.Single && !group.AllowNone) {
-                ReportError($"Group '{group.GroupName}' chưa bật ALLOW NONE.");
-                return;
-            }
+
             var root = Character?.GameObject?.transform;
             if (root == null) {
                 ReportError("Character chưa được gán hoặc chưa load.");
@@ -596,10 +587,7 @@ namespace Warudo.Plugins.McpBridge {
                 return false;
             }
             var group = Groups[groupIndex];
-            if (group.GroupType == OutfitGroupType.Single && !group.AllowNone) {
-                error = $"Group '{groupName}' chưa bật ALLOW NONE.";
-                return false;
-            }
+
             DisableAllItems(groupIndex);
             return true;
         }
